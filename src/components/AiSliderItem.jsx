@@ -1,37 +1,69 @@
-import React from 'react';
+import { useRef } from 'react';
 import { Bot } from 'lucide-react';
+
+const TRACK_HEIGHT = 160;
+const INDICATOR_HEIGHT = 40;
+const MAX_INDICATOR_BOTTOM = TRACK_HEIGHT - INDICATOR_HEIGHT;
 
 const AiSliderItem = ({ side, index, val, onChange }) => {
   const isPro = side === 'pro';
-  const intensity = Math.abs(val);
+  const trackRef = useRef(null);
+  const fillColor = isPro ? '#77A8F2' : '#FF737D';
+  const indicatorBottom =
+    ((val - 1) / 4) * MAX_INDICATOR_BOTTOM;
+  const fillHeight = indicatorBottom + INDICATOR_HEIGHT;
+  const fillPercent = (fillHeight / TRACK_HEIGHT) * 100;
+
+  const handleClick = (e) => {
+    const rect = trackRef.current.getBoundingClientRect();
+    const offsetY = Math.min(Math.max(e.clientY - rect.top, 0), rect.height);
+    const stepHeight = rect.height / 5;
+    const level = Math.min(5, Math.max(1, 5 - Math.floor(offsetY / stepHeight)));
+    onChange(side, index, level);
+  };
+
+  const handleDrag = (e) => {
+    if (e.buttons !== 1) return;
+    handleClick(e);
+  };
 
   return (
-    <div className="bg-white/10 p-5 rounded-2xl mb-4 border border-white/20 backdrop-blur-sm transition-all hover:bg-white/15">
-      <div className="flex justify-between items-end mb-4">
-        <span className="font-semibold text-white flex items-center gap-2">
-          <Bot size={18} /> {isPro ? '찬성' : '반대'} AI {index + 1}
-        </span>
-        <span className={`text-sm font-bold px-2 py-1 rounded-md ${isPro ? 'bg-blue-500/20 text-blue-200' : 'bg-red-500/20 text-red-200'}`}>
-          +{val} (강도 {val})
-        </span>
+    <div className="flex min-h-[260px] flex-col items-center justify-center gap-2 px-3 py-2 select-none">
+      <span className="font-semibold text-[15px] text-stone-800">
+        AI #{index + 1}
+      </span>
+
+      <span className="text-[12px] font-semibold text-stone-700">+5</span>
+
+      {/* One UI 볼륨바 */}
+      <div
+        ref={trackRef}
+        onClick={handleClick}
+        onMouseMove={handleDrag}
+        className="relative w-10 rounded-3xl cursor-pointer overflow-visible"
+        style={{ height: TRACK_HEIGHT, background: 'rgba(0,0,0,0.07)' }}
+      >
+        {/* 채워지는 부분 */}
+        <div
+          className="absolute bottom-0 left-0 right-0 z-10 rounded-3xl transition-all duration-200"
+          style={{
+            height: `${fillPercent}%`,
+            background: fillColor,
+            boxShadow: `0 10px 18px ${fillColor}45`,
+          }}
+        />
+        {/* 상단 인디케이터 */}
+        <div
+          className="absolute left-0 right-0 z-20 rounded-3xl bg-white shadow-[0_8px_16px_rgba(0,0,0,0.18)] transition-all duration-200"
+          style={{ height: INDICATOR_HEIGHT, bottom: indicatorBottom }}
+        />
       </div>
 
-      <div className="relative pt-2 pb-6">
-        <input
-          type="range"
-          min="1"
-          max="5"
-          step="1"
-          value={val}
-          onChange={(e) => onChange(side, index, e.target.value)}
-          className={`w-full relative z-10 cursor-pointer h-2 bg-white/20 rounded-lg appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white ${isPro ? 'accent-blue-500' : 'accent-red-500'}`}
-        />
-        <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[11px] text-white/50 font-medium px-1 pointer-events-none">
-          <span>+1</span>
-          <span>+3</span>
-          <span>+5</span>
-        </div>
-      </div>
+      <span className="mt-1 text-[12px] font-semibold leading-none text-stone-700">+1</span>
+
+      <span className={`mt-1 rounded-full px-3 py-1 text-[13px] font-bold text-white shadow-[0_6px_10px_rgba(0,0,0,0.18)] ${isPro ? 'bg-[#77A8F2]' : 'bg-[#FF737D]'}`}>
+        +{val}
+      </span>
     </div>
   );
 };

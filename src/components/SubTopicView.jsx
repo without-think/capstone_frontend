@@ -7,12 +7,17 @@ const SubTopicView = ({ activeData, selectedSubTopics, onToggle, visible }) => {
       ${!visible ? 'opacity-0 -translate-x-32 pointer-events-none' : 'opacity-100 translate-x-0 delay-100'}
     `}>
       {activeData && (
-        <div className="flex flex-col items-center transform -translate-y-16">
-          <activeData.icon size={80} className="text-white mb-6 opacity-90" strokeWidth={1.5} />
-          <h1 className="text-5xl md:text-6xl font-extrabold text-white mb-4 tracking-tight text-center">
+        <div className="flex flex-col items-center transform -translate-y-16 w-full">
+          <activeData.icon
+            size={72}
+            strokeWidth={1.5}
+            className="mb-6"
+            style={{ color: activeData.accent }}
+          />
+          <h1 className="text-5xl md:text-6xl font-extrabold text-stone-800 mb-4 tracking-tight text-center">
             {activeData.title}
           </h1>
-          <p className="text-xl text-white/80 mb-16 text-center max-w-xl">
+          <p className="text-xl text-stone-400 mb-16 text-center max-w-xl">
             원하는 세부 토론 논제를 자유롭게 선택해주세요.
           </p>
 
@@ -23,11 +28,15 @@ const SubTopicView = ({ activeData, selectedSubTopics, onToggle, visible }) => {
                 <button
                   key={sub}
                   onClick={() => onToggle(sub)}
-                  className={`flex items-center gap-3 px-6 py-4 rounded-full text-lg font-medium transition-all duration-300 ${isSelected ? 'bg-white text-stone-900 scale-105 shadow-xl ring-4 ring-white/50' : 'bg-white/15 text-white hover:bg-white/25 border border-white/20 backdrop-blur-sm hover:scale-105'}`}
+                  className={`flex items-center gap-3 px-6 py-4 rounded-full text-lg font-medium transition-all duration-300 ${
+                    isSelected
+                      ? 'bg-stone-900 text-white scale-105 shadow-xl'
+                      : 'bg-white text-stone-600 border border-stone-200 shadow-sm hover:border-stone-300 hover:shadow-md hover:scale-105'
+                  }`}
                 >
                   {isSelected
-                    ? <Check size={20} className="text-emerald-600" />
-                    : <div className="w-5 h-5 rounded-full border-2 border-white/40" />
+                    ? <Check size={20} className="text-emerald-400" />
+                    : <div className="w-5 h-5 rounded-full border-2 border-stone-300" />
                   }
                   {sub}
                 </button>
