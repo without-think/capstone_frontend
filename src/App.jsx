@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { X, ChevronLeft } from 'lucide-react';
 import { TOPICS } from './data/topics';
+import { fetchTodayTopics } from './api/topicsApi';
+import { createSession } from './api/sessionsApi';
 import TopicGrid from './components/TopicGrid';
 import BackgroundBubbles from './components/BackgroundBubbles';
 import HomeLanding from './components/HomeLanding';
@@ -16,11 +18,21 @@ const App = () => {
   const [routePath, setRoutePath] = useState(getInitialRoute);
   const [activeTopic, setActiveTopic] = useState(null);
   const [selectedSubTopics, setSelectedSubTopics] = useState([]);
-  const [stage, setStage] = useState(0); // 0: 세부주제, 1: 참여설정, 2: 사전설문, 3: 사전퀴즈
+  const [stage, setStage] = useState(0); // 0: 세부주제, 1: 참여설정, 2: 사전설문, 3: 사전퀴즈, 4: 토론
   const [userStance, setUserStance] = useState(null);
   const [agentCount, setAgentCount] = useState(1);
   const [aiStances, setAiStances] = useState({ pro: [5, 3, 1], con: [5, 3, 1] });
-  const activeData = TOPICS.find(t => t.id === activeTopic);
+  const [topics, setTopics] = useState(TOPICS); // 기본값: 하드코딩 데이터 (API 실패 시 fallback)
+  const [sessionId, setSessionId] = useState(null);
+
+  // 오늘의 주제 fetch
+  useEffect(() => {
+    fetchTodayTopics()
+      .then(setTopics)
+      .catch(() => {}); // 실패 시 하드코딩 TOPICS 유지
+  }, []);
+
+  const activeData = topics.find(t => t.id === activeTopic);
   const activeProAiCount = userStance === 'pro' ? agentCount - 1 : agentCount;
   const activeConAiCount = userStance === 'con' ? agentCount - 1 : agentCount;
   const isTopicSelectionRoute = routePath === '/topics';
@@ -73,6 +85,14 @@ const App = () => {
   };
 
   const handleEnter = () => {
+    createSession({
+      topic: selectedSubTopics[0],
+      userStance,
+      agentCount,
+      aiStances,
+    })
+      .then((res) => setSessionId(res.id ?? res.sessionId ?? null))
+      .catch(() => {}); // 실패 시 세션 없이 진행
     setStage(2); // 참여설정 → 사전설문
   };
 
@@ -140,10 +160,10 @@ const App = () => {
       <div
         className={`fixed inset-0 z-30 flex flex-col transition-all duration-700 delay-300
         ${activeTopic ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        style={{ background: preDebateBackground }}
+        style={stage < 4 ? { background: preDebateBackground } : undefined}
       >
         {/* 토론 페이지가 아닐 때만 네비 버튼 표시 */}
-        {(
+        {stage < 4 && (
           <div className="absolute top-8 left-8 right-8 md:top-12 md:left-12 md:right-12 flex justify-between z-50">
             <button
               onClick={() => setStage(prev => Math.max(0, prev - 1))}
@@ -160,7 +180,7 @@ const App = () => {
           </div>
         )}
 
-        <div className={`relative flex-1 flex justify-center w-full ${stage === 1 ? 'overflow-visible' : 'overflow-hidden'} mt-24 md:mt-10`}>
+        <div className={`relative flex-1 flex justify-center w-full ${stage === 1 ? 'overflow-visible' : 'overflow-hidden'} ${stage < 4 ? 'mt-24 md:mt-10' : ''}`}>
           <SubTopicView
             activeData={activeData}
             selectedSubTopics={selectedSubTopics}
@@ -189,22 +209,18 @@ const App = () => {
           <PreQuiz
             topicId={activeTopic}
             visible={stage === 3}
-            onComplete={() => {
-              alert('사전 점검이 완료되었습니다.');
-              handleClose();
-              navigate('/topics');
-            }}
+            onComplete={() => setStage(4)}
           />
         </div>
       </div>
 
       {/* [4] 하단 플로팅 액션 바 - 참여설정(stage 1)에서만 표시 */}
-      <FloatingActionBar
+      {stage < 4 && <FloatingActionBar
         selectedSubTopics={selectedSubTopics}
         stage={stage}
         userStance={userStance}
         onEnter={handleEnter}
-      />
+      />}
     </div>
   );
 };
