@@ -57,50 +57,53 @@ const PreQuiz = ({ visible, topicId, onComplete }) => {
   };
 
   return (
-    <div className={`absolute inset-0 flex flex-col transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]
+    <div className={`hide-scrollbar absolute inset-0 overflow-y-auto transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]
       ${!visible ? 'opacity-0 translate-x-32 pointer-events-none' : 'opacity-100 translate-x-0 delay-100'}`}
     >
-      {/* 헤더 */}
-      <div className="shrink-0 bg-white/70 backdrop-blur-md border-b border-stone-200/70 px-8 py-5">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <p className="text-[11px] text-stone-400 font-medium uppercase tracking-wider">사전 퀴즈</p>
-              <h2 className="text-stone-800 font-bold text-lg">주제 관련 지식 확인</h2>
-            </div>
-            <span className="text-sm font-semibold text-stone-500">
+      <div className="mx-auto flex w-full max-w-5xl flex-col px-6 pb-24 pt-6">
+        <div className="mb-6 text-center">
+          <span className="mb-3 inline-block rounded-full bg-stone-100/90 px-4 py-1 text-sm font-semibold text-stone-500">
+            사전 퀴즈
+          </span>
+          <h2 className="text-[30px] font-extrabold tracking-tight text-stone-800 md:text-[36px]">
+            주제 관련 지식 확인
+          </h2>
+          <p className="mt-2 text-[15px] font-medium text-stone-500 md:text-[17px]">
+            토론 전에 핵심 사실 이해도를 간단히 점검합니다
+          </p>
+        </div>
+
+        <div className="mx-auto mb-5 w-full max-w-3xl rounded-[28px] border border-white/80 bg-white/78 px-6 py-5 backdrop-blur-md shadow-[0_16px_32px_rgba(0,0,0,0.08)]">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm font-semibold tracking-[0.02em] text-stone-500">진행 현황</p>
+            <span className="text-sm font-bold text-stone-600">
               {currentIdx + 1} / {total}
             </span>
           </div>
-          {/* 진행 바 */}
-          <div className="h-1.5 bg-stone-200 rounded-full overflow-hidden">
+          <div className="h-2 overflow-hidden rounded-full bg-stone-200">
             <div
-              className="h-full bg-stone-700 rounded-full transition-all duration-500"
+              className="h-full rounded-full bg-stone-700 transition-all duration-500"
               style={{ width: `${((currentIdx + (canNext ? 1 : 0)) / total) * 100}%` }}
             />
           </div>
         </div>
-      </div>
 
-      {/* 문제 영역 */}
-      <div className="flex-1 overflow-y-auto hide-scrollbar px-8 py-8">
-        <div className="max-w-2xl mx-auto flex flex-col gap-6">
+        <div className="px-2 py-2">
+          <div className="mx-auto flex max-w-3xl flex-col gap-6">
 
-          {/* 문제 번호 + 질문 */}
-          <div className="bg-white rounded-2xl px-7 py-6 shadow-sm border border-stone-100">
-            <span className="inline-block text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">
+          <div className="rounded-[26px] border border-white/80 bg-white/94 px-8 py-7 shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
+            <span className="mb-3 inline-block text-xs font-bold uppercase tracking-widest text-stone-400">
               Q{currentIdx + 1}
             </span>
-            <p className="text-stone-800 font-semibold text-lg leading-snug">{q.text}</p>
+            <p className="text-[19px] font-semibold leading-snug text-stone-800">{q.text}</p>
           </div>
 
-          {/* 보기 */}
           <div className="flex flex-col gap-3">
             {q.options.map((opt, idx) => (
               <button
                 key={idx}
                 onClick={() => handleSelect(idx)}
-                className={`flex items-center gap-4 px-5 py-4 rounded-xl border-2 text-left transition-all duration-200 ${getOptionStyle(idx)}`}
+                className={`flex items-center gap-4 rounded-[22px] border-2 px-6 py-4 text-left transition-all duration-200 ${getOptionStyle(idx)}`}
               >
                 <span className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border
                   ${selected === null ? 'border-stone-200 text-stone-400' :
@@ -116,14 +119,13 @@ const PreQuiz = ({ visible, topicId, onComplete }) => {
             ))}
           </div>
 
-          {/* 확신도 — 보기 선택 후 등장 */}
           <div className={`transition-all duration-300 ${selected !== null ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-            <div className="bg-white rounded-2xl px-7 py-5 shadow-sm border border-stone-100">
-              <p className="text-stone-600 font-semibold text-sm mb-4">이 답에 얼마나 확신하십니까?</p>
+            <div className="rounded-[26px] border border-white/80 bg-white/94 px-8 py-6 shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
+              <p className="mb-4 text-sm font-semibold text-stone-600">이 답에 얼마나 확신하십니까?</p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setConfidence(true)}
-                  className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all duration-200 border-2
+                  className={`flex-1 rounded-[18px] border-2 py-3 text-sm font-bold transition-all duration-200
                     ${confidence === true
                       ? 'bg-stone-800 text-white border-stone-800'
                       : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'
@@ -133,7 +135,7 @@ const PreQuiz = ({ visible, topicId, onComplete }) => {
                 </button>
                 <button
                   onClick={() => setConfidence(false)}
-                  className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all duration-200 border-2
+                  className={`flex-1 rounded-[18px] border-2 py-3 text-sm font-bold transition-all duration-200
                     ${confidence === false
                       ? 'bg-stone-800 text-white border-stone-800'
                       : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'
@@ -146,18 +148,16 @@ const PreQuiz = ({ visible, topicId, onComplete }) => {
           </div>
 
         </div>
-      </div>
+        </div>
 
-      {/* 하단 버튼 */}
-      <div className="shrink-0 bg-white/70 backdrop-blur-md border-t border-stone-200/70 px-8 py-5">
-        <div className="max-w-2xl mx-auto flex justify-end">
+        <div className="mx-auto mt-6 flex w-full max-w-3xl justify-end rounded-[24px] border border-white/80 bg-white/78 px-6 py-5 backdrop-blur-md shadow-[0_16px_32px_rgba(0,0,0,0.08)]">
           <button
             onClick={handleNext}
             disabled={!canNext}
-            className={`px-10 py-3.5 rounded-full font-bold text-base transition-all duration-300
+            className={`rounded-full px-10 py-3.5 text-base font-bold transition-all duration-300
               ${canNext
-                ? 'bg-stone-900 text-white hover:bg-black hover:scale-105 shadow-lg cursor-pointer'
-                : 'bg-stone-100 text-stone-300 cursor-not-allowed'
+                ? 'cursor-pointer bg-stone-900 text-white shadow-lg hover:scale-105 hover:bg-black'
+                : 'cursor-not-allowed bg-stone-100 text-stone-300'
               }`}
           >
             {isLast ? '퀴즈 완료 →' : '다음 문제 →'}
