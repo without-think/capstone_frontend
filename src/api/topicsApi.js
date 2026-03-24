@@ -1,10 +1,10 @@
 import { apiFetch } from './index';
-import { TOPICS } from '../data/topics'; //일단 로컬 데이터 불러오고 서버값으로 교체
+import { TOPICS } from '../data/topics';
 
 // API 카테고리명 → TOPICS id 매핑
 const buildTopicsWithApiData = (categories) => {
   return TOPICS.map((topic) => {
-    const apiSubTopics = categories[topic.title];  //벡엔드에서 topic.title 로 변수명이 지정되어있어야 함
+    const apiSubTopics = categories[topic.title];
     if (!apiSubTopics) return topic;
     return {
       ...topic,
