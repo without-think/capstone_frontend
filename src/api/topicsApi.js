@@ -20,6 +20,6 @@ const buildTopicsWithApiData = (categories) => {
 };
 
 export const fetchTodayTopics = async () => {
-  const data = await apiFetch('/api/topics/today');
+  const data = await apiFetch('/api/topics');
   return buildTopicsWithApiData(data.categories);
 };

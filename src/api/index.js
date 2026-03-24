@@ -1,4 +1,4 @@
-export const BASE_URL = 'http://localhost:8081';
+export const BASE_URL = 'http://localhost:8080';
 
 export const apiFetch = async (path, options = {}) => {
   const res = await fetch(`${BASE_URL}${path}`, {
