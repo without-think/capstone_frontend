@@ -7,6 +7,8 @@ import HomeLanding from './components/HomeLanding';
 import TopHeader from './components/TopHeader';
 import SubTopicView from './components/SubTopicView';
 import ParamsView from './components/ParamsView';
+import PreSurvey from './components/PreSurvey';
+import PreQuiz from './components/PreQuiz';
 import FloatingActionBar from './components/FloatingActionBar';
 
 const App = () => {
@@ -14,11 +16,10 @@ const App = () => {
   const [routePath, setRoutePath] = useState(getInitialRoute);
   const [activeTopic, setActiveTopic] = useState(null);
   const [selectedSubTopics, setSelectedSubTopics] = useState([]);
-  const [stage, setStage] = useState(0); // 0: 세부주제, 1: 참여설정
+  const [stage, setStage] = useState(0); // 0: 세부주제, 1: 참여설정, 2: 사전설문, 3: 사전퀴즈
   const [userStance, setUserStance] = useState(null);
   const [agentCount, setAgentCount] = useState(1);
   const [aiStances, setAiStances] = useState({ pro: [5, 3, 1], con: [5, 3, 1] });
-
   const activeData = TOPICS.find(t => t.id === activeTopic);
   const activeProAiCount = userStance === 'pro' ? agentCount - 1 : agentCount;
   const activeConAiCount = userStance === 'con' ? agentCount - 1 : agentCount;
@@ -72,11 +73,7 @@ const App = () => {
   };
 
   const handleEnter = () => {
-    const proAiSet = aiStances.pro.slice(0, activeProAiCount);
-    const conAiSet = aiStances.con.slice(0, activeConAiCount);
-    alert(
-      `[ 토론 준비 ]\n주제: ${selectedSubTopics.join(', ')}\n내 입장: ${userStance === 'pro' ? '찬성' : '반대'}\n설정: ${agentCount} vs ${agentCount}\n찬성 AI 성향: [${proAiSet}]\n반대 AI 성향: [${conAiSet}]`
-    );
+    setStage(2); // 참여설정 → 사전설문
   };
 
   useEffect(() => {
@@ -182,6 +179,21 @@ const App = () => {
             activeConAiCount={activeConAiCount}
             onSliderChange={handleSliderChange}
             visible={stage === 1}
+          />
+          <PreSurvey
+            topicId={activeTopic}
+            userStance={userStance}
+            visible={stage === 2}
+            onComplete={() => setStage(3)}
+          />
+          <PreQuiz
+            topicId={activeTopic}
+            visible={stage === 3}
+            onComplete={() => {
+              alert('사전 점검이 완료되었습니다.');
+              handleClose();
+              navigate('/topics');
+            }}
           />
         </div>
       </div>
