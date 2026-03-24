@@ -10,7 +10,7 @@ const FloatingActionBar = ({ selectedSubTopics, stage, userStance, onEnter }) =>
           onClick={onEnter}
           className="flex items-center gap-4 px-12 py-5 bg-stone-900 text-white rounded-full font-bold text-xl hover:bg-black hover:scale-105 active:scale-95 transition-all shadow-2xl cursor-pointer"
         >
-          설정 완료하기
+          설문 시작하기
         </button>
       )}
     </div>
