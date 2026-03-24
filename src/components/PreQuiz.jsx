@@ -16,10 +16,10 @@ const PreQuiz = ({ visible, topicId, onComplete }) => {
   const total = questions.length;
   const q = questions[currentIdx];
   const isLast = currentIdx === total - 1;
+  const hasPrevious = currentIdx > 0;
   const canNext = selected !== null && confidence !== null;
 
   const handleSelect = (idx) => {
-    if (selected !== null) return; // 이미 선택한 경우 변경 불가
     setSelected(idx);
   };
 
@@ -43,15 +43,29 @@ const PreQuiz = ({ visible, topicId, onComplete }) => {
     }
   };
 
+  const handlePrev = () => {
+    if (!hasPrevious) return;
+
+    const previousRecord = answers[answers.length - 1];
+    if (!previousRecord) {
+      setCurrentIdx(i => Math.max(0, i - 1));
+      setSelected(null);
+      setConfidence(null);
+      return;
+    }
+
+    setAnswers(prev => prev.slice(0, -1));
+    setCurrentIdx(i => i - 1);
+    setSelected(previousRecord.selected);
+    setConfidence(previousRecord.confident);
+  };
+
   const getOptionStyle = (idx) => {
     if (selected === null) {
       return 'bg-white border-stone-200 text-stone-700 hover:border-stone-400 hover:shadow-md cursor-pointer';
     }
-    if (idx === q.answer) {
-      return 'bg-emerald-50 border-emerald-400 text-emerald-800';
-    }
-    if (idx === selected && selected !== q.answer) {
-      return 'bg-rose-50 border-rose-400 text-rose-800';
+    if (idx === selected) {
+      return 'bg-stone-800 border-stone-800 text-white';
     }
     return 'bg-stone-50 border-stone-100 text-stone-400';
   };
@@ -60,6 +74,7 @@ const PreQuiz = ({ visible, topicId, onComplete }) => {
     <div className={`hide-scrollbar absolute inset-0 overflow-y-auto transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]
       ${!visible ? 'opacity-0 translate-x-32 pointer-events-none' : 'opacity-100 translate-x-0 delay-100'}`}
     >
+<<<<<<< Updated upstream
       <div className="mx-auto flex w-full max-w-5xl flex-col px-6 pb-24 pt-6">
         <div className="mb-6 text-center">
           <span className="mb-3 inline-block rounded-full bg-stone-100/90 px-4 py-1 text-sm font-semibold text-stone-500">
@@ -69,11 +84,26 @@ const PreQuiz = ({ visible, topicId, onComplete }) => {
             주제 관련 지식 확인
           </h2>
           <p className="mt-2 text-[15px] font-medium text-stone-500 md:text-[17px]">
+=======
+      <div className="mx-auto flex w-full max-w-5xl flex-col px-6 pb-16 pt-4">
+        <div className="mb-4 text-center">
+          <span className="mb-2 inline-block rounded-full bg-stone-100/90 px-4 py-1 text-sm font-semibold text-stone-500">
+            사전 퀴즈
+          </span>
+          <h2 className="text-[24px] font-extrabold tracking-tight text-stone-800 md:text-[28px]">
+            주제 관련 지식 확인
+          </h2>
+          <p className="mt-1 text-[13px] font-medium text-stone-500 md:text-[15px]">
+>>>>>>> Stashed changes
             토론 전에 핵심 사실 이해도를 간단히 점검합니다
           </p>
         </div>
 
+<<<<<<< Updated upstream
         <div className="mx-auto mb-5 w-full max-w-3xl rounded-[28px] border border-white/80 bg-white/78 px-6 py-5 backdrop-blur-md shadow-[0_16px_32px_rgba(0,0,0,0.08)]">
+=======
+        <div className="mx-auto mb-3 w-full max-w-3xl rounded-[32px] border border-white/80 bg-white/78 px-5 py-3 backdrop-blur-md shadow-[0_16px_32px_rgba(0,0,0,0.08)]">
+>>>>>>> Stashed changes
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-semibold tracking-[0.02em] text-stone-500">진행 현황</p>
             <span className="text-sm font-bold text-stone-600">
@@ -89,43 +119,65 @@ const PreQuiz = ({ visible, topicId, onComplete }) => {
         </div>
 
         <div className="px-2 py-2">
+<<<<<<< Updated upstream
           <div className="mx-auto flex max-w-3xl flex-col gap-6">
 
           <div className="rounded-[26px] border border-white/80 bg-white/94 px-8 py-7 shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
+=======
+          <div className="mx-auto flex max-w-3xl flex-col gap-3">
+
+          <div className="rounded-[32px] border border-white/80 bg-white/94 px-6 py-5 shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
+>>>>>>> Stashed changes
             <span className="mb-3 inline-block text-xs font-bold uppercase tracking-widest text-stone-400">
               Q{currentIdx + 1}
             </span>
             <p className="text-[19px] font-semibold leading-snug text-stone-800">{q.text}</p>
           </div>
 
+<<<<<<< Updated upstream
           <div className="flex flex-col gap-3">
+=======
+          <div className="grid grid-cols-4 gap-3">
+>>>>>>> Stashed changes
             {q.options.map((opt, idx) => (
               <button
                 key={idx}
                 onClick={() => handleSelect(idx)}
+<<<<<<< Updated upstream
                 className={`flex items-center gap-4 rounded-[22px] border-2 px-6 py-4 text-left transition-all duration-200 ${getOptionStyle(idx)}`}
+=======
+                className={`flex items-center justify-center gap-2 rounded-full border-2 px-4 py-3 text-center transition-all duration-200 ${getOptionStyle(idx)}`}
+>>>>>>> Stashed changes
               >
                 <span className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border
                   ${selected === null ? 'border-stone-200 text-stone-400' :
-                    idx === q.answer ? 'bg-emerald-400 border-emerald-400 text-white' :
-                    idx === selected ? 'bg-rose-400 border-rose-400 text-white' :
+                    idx === selected ? 'bg-stone-800 border-stone-800 text-white' :
                     'border-stone-200 text-stone-300'
                   }`}
                 >
                   {OPTION_LABELS[idx]}
                 </span>
-                <span className="font-medium">{opt}</span>
+                <span className="min-w-0 text-sm font-medium leading-tight">{opt}</span>
               </button>
             ))}
           </div>
 
           <div className={`transition-all duration-300 ${selected !== null ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+<<<<<<< Updated upstream
             <div className="rounded-[26px] border border-white/80 bg-white/94 px-8 py-6 shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
               <p className="mb-4 text-sm font-semibold text-stone-600">이 답에 얼마나 확신하십니까?</p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setConfidence(true)}
                   className={`flex-1 rounded-[18px] border-2 py-3 text-sm font-bold transition-all duration-200
+=======
+            <div className="rounded-[32px] border border-white/80 bg-white/94 px-6 py-4 shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
+              <p className="mb-3 text-sm font-semibold text-stone-600">이 답에 얼마나 확신하십니까?</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfidence(true)}
+                  className={`flex-1 rounded-full border-2 py-3 text-sm font-bold transition-all duration-200
+>>>>>>> Stashed changes
                     ${confidence === true
                       ? 'bg-stone-800 text-white border-stone-800'
                       : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'
@@ -135,7 +187,11 @@ const PreQuiz = ({ visible, topicId, onComplete }) => {
                 </button>
                 <button
                   onClick={() => setConfidence(false)}
+<<<<<<< Updated upstream
                   className={`flex-1 rounded-[18px] border-2 py-3 text-sm font-bold transition-all duration-200
+=======
+                  className={`flex-1 rounded-full border-2 py-3 text-sm font-bold transition-all duration-200
+>>>>>>> Stashed changes
                     ${confidence === false
                       ? 'bg-stone-800 text-white border-stone-800'
                       : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'
@@ -150,7 +206,22 @@ const PreQuiz = ({ visible, topicId, onComplete }) => {
         </div>
         </div>
 
+<<<<<<< Updated upstream
         <div className="mx-auto mt-6 flex w-full max-w-3xl justify-end rounded-[24px] border border-white/80 bg-white/78 px-6 py-5 backdrop-blur-md shadow-[0_16px_32px_rgba(0,0,0,0.08)]">
+=======
+        <div className="mx-auto mt-4 flex w-full max-w-3xl items-center justify-between rounded-[32px] border border-white/80 bg-white/78 px-5 py-3 backdrop-blur-md shadow-[0_16px_32px_rgba(0,0,0,0.08)]">
+          <button
+            onClick={handlePrev}
+            disabled={!hasPrevious}
+            className={`rounded-full px-7 py-3 text-sm font-bold transition-all duration-300 ${
+              hasPrevious
+                ? 'cursor-pointer border border-stone-300 bg-white text-stone-600 hover:scale-105 hover:border-stone-400'
+                : 'cursor-not-allowed border border-stone-200 bg-stone-100 text-stone-300'
+            }`}
+          >
+            ← 이전 문제
+          </button>
+>>>>>>> Stashed changes
           <button
             onClick={handleNext}
             disabled={!canNext}
