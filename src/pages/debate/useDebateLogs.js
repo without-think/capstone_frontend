@@ -1,15 +1,34 @@
 import { useState, useEffect } from 'react';
-import { MOCK_SPEECH_LOGS } from './mockData';
+import { MOCK_SPEECH_LOGS, STAGE1_ORDER } from './mockData';
+
+/**
+ * opening phase SSE 응답을 UI 로그 형식으로 변환
+ * - turn 값으로 STAGE1_ORDER에서 표시 이름(찬성 1, 반대 1 등)을 가져옴
+ */
+function transformOpeningLog(raw) {
+  const orderEntry = STAGE1_ORDER[raw.turn];
+  return {
+    id: raw.turn,
+    stage: 1,
+    side: raw.stance.toLowerCase(),          // "PRO" → "pro"
+    speaker: orderEntry?.label ?? raw.speakerId,
+    type: '입론',
+    turnNumber: raw.turn,
+    phase: raw.phase,
+    toolsUsed: [],
+    text: raw.content,
+    targetId: raw.targetId ?? null,
+  };
+}
 
 /**
  * 토론 로그를 가져오는 훅.
  * - sessionId가 없으면 Mock 데이터 반환
- * - sessionId가 있으면 백엔드 API에서 폴링
+ * - sessionId가 있으면 SSE(text/event-stream)로 opening 단계 수신
  *
  * @param {string|null} sessionId - 백엔드 debate session ID
- * @param {number} pollInterval - 폴링 주기(ms), 기본 3000
  */
-export function useDebateLogs(sessionId, pollInterval = 3000) {
+export function useDebateLogs(sessionId) {
   const [logs, setLogs] = useState(MOCK_SPEECH_LOGS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -21,33 +40,32 @@ export function useDebateLogs(sessionId, pollInterval = 3000) {
       return;
     }
 
-    let cancelled = false;
+    setLoading(true);
+    setLogs([]);
 
-    const fetchLogs = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch(`/api/debate/sessions/${sessionId}/messages`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        if (!cancelled) setLogs(data);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err.message);
-          setLogs(MOCK_SPEECH_LOGS); // 오류 시 Mock으로 폴백
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+    const es = new EventSource(`/api/debates/${sessionId}/opening`);
+
+    es.onmessage = (event) => {
+      const raw = JSON.parse(event.data);
+      if (raw.type === 'done') {
+        setLoading(false);
+        es.close();
+        return;
       }
+      setLogs((prev) => [...prev, transformOpeningLog(raw)]);
     };
 
-    fetchLogs();
-    const interval = setInterval(fetchLogs, pollInterval);
+    es.onerror = () => {
+      setError('SSE 연결 오류');
+      setLogs(MOCK_SPEECH_LOGS);
+      setLoading(false);
+      es.close();
+    };
 
     return () => {
-      cancelled = true;
-      clearInterval(interval);
+      es.close();
     };
-  }, [sessionId, pollInterval]);
+  }, [sessionId]);
 
   return { logs, loading, error };
 }
