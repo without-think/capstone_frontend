@@ -74,11 +74,11 @@ export const ANALYSIS_BY_STAGE = {
 // ─── Mock 대화 로그 ────────────────────────────────────────────────────────────
 export const MOCK_SPEECH_LOGS = [
   {
-    id: 'm1', stage: 1, moderator: true, time: '00:00',
+    id: 'm1', stage: 1, moderator: true,
     text: '안녕하세요. 오늘 토론 주제는 "생성형 AI 선제 규제, 필요한가"입니다. 1단계 입론에서는 각 토론자가 순서대로 자신의 핵심 주장을 발표합니다. 찬성 1부터 시작해주세요.',
   },
   {
-    id: 1, stage: 1, side: 'pro', speaker: '찬성 1', type: '입론', time: '00:42',
+    id: 1, stage: 1, side: 'pro', speaker: '찬성 1', type: '입론',
     turnNumber: 0, phase: 'opening', toolsUsed: [],
     text: `## 인사말
     안녕하세요, 찬성 에이전트1 입니다. 인공지능 발전이 인간 노동력을 대체하는 것이 아니라, 새로운 일자리를 창출한다는 점을 확신하여 이 논제에 찬성합니다.
@@ -100,7 +100,7 @@ export const MOCK_SPEECH_LOGS = [
     tags: ['근거 제시', '핵심 주장'],
   },
   {
-    id: 2, stage: 1, side: 'con', speaker: '반대 1', type: '입론', time: '01:10',
+    id: 2, stage: 1, side: 'con', speaker: '반대 1', type: '입론',
     turnNumber: 1, phase: 'opening', toolsUsed: ['search_web', 'search_vector_db'],
     text: `## 인사말
 
@@ -138,7 +138,7 @@ export const MOCK_SPEECH_LOGS = [
     tags: ['사례 제시', '핵심 주장'],
   },
   {
-    id: 3, stage: 1, side: 'pro', speaker: '찬성 2', type: '입론', time: '01:55',
+    id: 3, stage: 1, side: 'pro', speaker: '찬성 2', type: '입론',
     turnNumber: 2, phase: 'opening', toolsUsed: ['search_web'],
     text: `## 인사말
 
@@ -166,7 +166,7 @@ export const MOCK_SPEECH_LOGS = [
     tags: ['사례 제시', '핵심 주장'],
   },
   {
-    id: 4, stage: 1, side: 'con', speaker: '반대 2 (나)', type: '입론', time: '02:38',
+    id: 4, stage: 1, side: 'con', speaker: '반대 2 (나)', type: '입론',
     turnNumber: 3, phase: 'opening', toolsUsed: [],
     text: `## 인사말\n안녕하세요. 반대 에이전트2 (나)입니다. **기준이 불명확한 상태의 선제 규제는 오히려 독이 된다**는 점을 중심으로 반대 입장을 밝힙니다.\n\n## 입장 표명\n**기준이 완비되지 않은 규제는 집행의 자의성을 높여 국내 기업만 역차별받는 구조를 만들고, 혁신 생태계를 돌이킬 수 없이 훼손할 수 있습니다.**\n\n## 논거 1: "위험" 정의의 정치적 남용 가능성\n원인은 **누가 "위험"을 정의하느냐**라는 근본적 문제가 해결되지 않은 채 규제가 시행된다는 점입니다. 결과는 **독립적 기준 설정 기구 없이는 선제 규제가 법치가 아닌 재량 행정**으로 전락할 위험이 큽니다.\n\n## 논거 2: 일몰 조항의 현실적 허구성\n**국내 규제 일몰 실제 폐지율이 12%에 불과**하며, 한번 도입된 규제는 이해관계자들의 반발로 사실상 영구화되는 경향이 있습니다.\n\n## 논거 3: 병행 진행 주장의 현실적 불가능성\n**집행 기준이 사후에 만들어지는 구조**에서는 초기 피규제자들이 불합리한 잣대에 노출되고, 이후 기준이 바뀌면 소급 적용 문제까지 발생합니다.\n\n## 결론\n저는 **독립 기구 설치와 명확한 위험 기준 설정을 먼저** 완료한 뒤 입법을 추진해야 한다고 확신합니다.`,
     tags: ['기준 문제', '핵심 주장'],
@@ -174,79 +174,79 @@ export const MOCK_SPEECH_LOGS = [
 
   // ── 2단계: 연쇄 논박
   {
-    id: 'm2', stage: 2, moderator: true, time: '03:00',
+    id: 'm2', stage: 2, moderator: true,
     text: '입론이 모두 끝났습니다. 이제 2단계 연쇄 논박입니다. 지정된 상대방의 입론을 직접 반박하는 1:1 크로스 형식으로 진행됩니다. 총 4라운드, 반대 1부터 시작합니다.',
   },
   {
-    id: 5, stage: 2, side: 'con', speaker: '반대 1', type: '반박', time: '03:15',
+    id: 5, stage: 2, side: 'con', speaker: '반대 1', type: '반박',
     text: '찬성 1께서 "사회적 비용 절감"을 언급하셨는데, 규제 준수 비용 자체가 막대한 사회적 비용입니다. 중소 AI 기업은 컴플라이언스 팀 구성조차 어렵습니다. 구체적인 비용 추정 근거가 있으신가요?',
     tags: ['비용 반박', '질문'],
   },
   {
-    id: 6, stage: 2, side: 'pro', speaker: '찬성 1', type: '재반박', time: '03:52',
+    id: 6, stage: 2, side: 'pro', speaker: '찬성 1', type: '재반박',
     text: 'OECD 2023 보고서에 따르면 AI 오작동으로 인한 의료 사고 손실 추정액은 연간 3,200억 달러입니다. 규제 준수 비용보다 훨씬 큰 규모입니다. 중소기업 지원 예외 조항을 함께 설계하면 됩니다.',
     tags: ['데이터 제시', '재반박'],
   },
   {
-    id: 7, stage: 2, side: 'con', speaker: '반대 2 (나)', type: '반박', time: '04:30',
+    id: 7, stage: 2, side: 'con', speaker: '반대 2 (나)', type: '반박',
     text: '찬성 2의 "위험 분야 우선 적용" 논리는 매력적이지만, 누가 "위험"을 정의하느냐가 핵심입니다. 정부 기관이 단독으로 판단하면 정치적 개입 여지가 생깁니다. 독립적인 기준 설정 기구 없이는 공허한 주장입니다.',
     tags: ['기준 문제', '조건부 반박'],
   },
   {
-    id: 8, stage: 2, side: 'pro', speaker: '찬성 2', type: '재반박', time: '05:10',
+    id: 8, stage: 2, side: 'pro', speaker: '찬성 2', type: '재반박',
     text: '좋은 지적입니다. 독립 기구 설치는 저도 동의합니다. 다만 기구가 없다는 이유로 규제 자체를 미루는 건 "기준이 완벽해질 때까지 기다리자"는 논리와 같습니다. 현행 위험 등급 분류 기준을 출발점으로 삼을 수 있습니다.',
     tags: ['부분 수용', '재반박'],
   },
 
   // ── 3단계: 자유 논박
   {
-    id: 'm3', stage: 3, moderator: true, time: '05:50',
+    id: 'm3', stage: 3, moderator: true,
     text: '연쇄 논박이 종료됐습니다. 3단계 자유 논박입니다. 고정 순서(찬1→반1→찬2→반2)로 최대 4사이클을 돌며 자유롭게 주장을 심화하거나 상대를 재반박할 수 있습니다.',
   },
   {
-    id: 9, stage: 3, side: 'pro', speaker: '찬성 1', type: '주장', time: '06:05',
+    id: 9, stage: 3, side: 'pro', speaker: '찬성 1', type: '주장',
     text: '지금까지 논의에서 찬반 모두 독립 기구의 필요성엔 동의했습니다. 그렇다면 쟁점은 "규제의 필요 여부"가 아니라 "어떻게 설계하느냐"로 좁혀졌습니다. 이 지점에서 선제 규제 반대 논거는 크게 약화됩니다.',
     tags: ['논점 전환', '핵심 주장'],
   },
   {
-    id: 10, stage: 3, side: 'con', speaker: '반대 1', type: '반박', time: '06:42',
+    id: 10, stage: 3, side: 'con', speaker: '반대 1', type: '반박',
     text: '설계 문제가 미해결인 상태에서 먼저 법을 통과시키는 건 위험합니다. 한국 입법 속도 평균을 고려하면 부실 입법이 10년 이상 유지될 수 있습니다.',
     tags: ['입법 리스크', '반박'],
   },
   {
-    id: 11, stage: 3, side: 'pro', speaker: '찬성 2', type: '주장', time: '07:18',
+    id: 11, stage: 3, side: 'pro', speaker: '찬성 2', type: '주장',
     text: '부실 입법 리스크는 동의합니다. 그래서 일몰 조항과 주기적 재검토 의무를 명문화하면 됩니다. 규제 없음보다 수정 가능한 규제가 낫습니다.',
     tags: ['보완책 제시', '주장'],
   },
   {
-    id: 12, stage: 3, side: 'con', speaker: '반대 2 (나)', type: '반박', time: '07:55',
+    id: 12, stage: 3, side: 'con', speaker: '반대 2 (나)', type: '반박',
     text: '일몰 조항은 현실에서 거의 적용되지 않습니다. 국내 규제 일몰 실제 폐지율은 12%에 불과합니다. 수정 가능한 규제라는 전제 자체가 낙관적입니다.',
     tags: ['데이터 반박', '핵심'],
   },
 
   // ── 4단계: 역할 반전
   {
-    id: 'm4', stage: 4, moderator: true, time: '09:00',
+    id: 'm4', stage: 4, moderator: true,
     text: '자유 논박이 마무리됐습니다. 4단계 역할 반전입니다. 각 토론자는 지금까지 공격했던 상대 진영의 논리를 직접 방어합니다. 반대 2(나)는 이제 찬성 측 입장을 취합니다.',
   },
   {
-    id: 13, stage: 4, side: 'pro', speaker: '반대 2 (나)', type: '주장', time: '09:10',
+    id: 13, stage: 4, side: 'pro', speaker: '반대 2 (나)', type: '주장',
     text: '역할을 바꿔 찬성 측 입장에서 말합니다. 아까 제가 지적한 기준 불명확 문제는 오히려 선제 규제가 있어야 해소됩니다. 법이 있어야 기준 논의가 제도화되고, 이해관계자들이 테이블에 앉을 유인이 생깁니다.',
     tags: ['역할 반전', '찬성 논거'],
   },
 
   // ── 5단계: 종합
   {
-    id: 'm5', stage: 5, moderator: true, time: '10:15',
+    id: 'm5', stage: 5, moderator: true,
     text: '역할 반전까지 모두 완료됐습니다. 마지막 5단계 종합입니다. 각 토론자는 오늘 논의를 정리하고 최선의 합의안을 도출해주세요. 판정단이 최종 평가를 진행합니다.',
   },
   {
-    id: 14, stage: 5, side: 'pro', speaker: '찬성 1', type: '주장', time: '10:30',
+    id: 14, stage: 5, side: 'pro', speaker: '찬성 1', type: '주장',
     text: '이번 토론의 핵심 합의점: 독립 기구 설치와 위험 등급 분류 기준 마련은 필수입니다. 그 위에서 선제 규제를 단계적으로 적용하는 방향이 최선안입니다.',
     tags: ['합의 도출', '종합'],
   },
   {
-    id: 15, stage: 5, side: 'con', speaker: '반대 1', type: '주장', time: '11:05',
+    id: 15, stage: 5, side: 'con', speaker: '반대 1', type: '주장',
     text: '반대 측도 규제 자체를 부정하지 않습니다. 다만 기준 없는 속도전보다 충분한 사회적 합의 후 입법을 강조합니다. 오늘 논의가 그 합의의 시작이 되길 바랍니다.',
     tags: ['입장 정리', '종합'],
   },

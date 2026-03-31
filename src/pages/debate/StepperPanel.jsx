@@ -1,4 +1,4 @@
-import { ChevronRight, Users, Mic, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, Users, Mic } from 'lucide-react';
 import { STAGES } from './mockData';
 
 export default function StepperPanel({
@@ -13,7 +13,7 @@ export default function StepperPanel({
   return (
     <section className="rounded-[32px] border border-white/80 bg-white/60 px-5 py-4 backdrop-blur-md shadow-[0_12px_32px_rgba(0,0,0,0.04)] flex flex-col gap-2">
       {/* 단계 스테퍼 */}
-      <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar">
+      <div className="flex items-center gap-0.5 overflow-x-auto hide-scrollbar">
         {STAGES.map((stage, i) => {
           const isDone   = currentStage > stage.id;
           const isActive = currentStage === stage.id;
@@ -21,19 +21,20 @@ export default function StepperPanel({
             <div key={stage.id} className="flex items-center shrink-0">
               <button
                 onClick={() => setCurrentStage(stage.id)}
-                className={`flex items-center justify-center px-3 py-1 rounded-full text-[11px] font-bold transition-all duration-300 ${
+                className={`flex h-7 items-center justify-center px-2.5 rounded-full border text-[10px] font-bold transition-all duration-300 whitespace-nowrap ${
                   isActive
-                    ? 'bg-stone-800 text-white shadow-[0_4px_10px_rgba(0,0,0,0.15)]'
+                    ? 'border-stone-800 bg-stone-800 text-white shadow-[0_4px_10px_rgba(0,0,0,0.15)]'
                     : isDone
-                      ? 'bg-white/80 text-stone-500 border border-stone-100 hover:bg-white'
-                      : 'text-stone-400'
+                      ? 'border-stone-200 bg-white/80 text-stone-500 hover:bg-white'
+                      : 'border-transparent bg-transparent text-stone-400'
                 }`}
               >
-                {isDone && <CheckCircle2 size={10} className="mr-1 text-stone-400" />}
                 {stage.label}
               </button>
               {i < STAGES.length - 1 && (
-                <ChevronRight size={12} className="text-stone-300 mx-0.5" />
+                <div className="mx-1 flex items-center justify-center shrink-0">
+                  <ChevronRight size={13} className="text-stone-500/70" strokeWidth={2.4} />
+                </div>
               )}
             </div>
           );
