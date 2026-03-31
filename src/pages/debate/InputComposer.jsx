@@ -1,24 +1,13 @@
-import { useEffect, useState } from 'react';
-import { SendHorizonal, Timer, Mic, Plus, X } from 'lucide-react';
+import { useState } from 'react';
+import { SendHorizonal, Mic, Plus, X } from 'lucide-react';
 import { MAX_ARGUMENT_TABS } from './mockData';
 
 export default function InputComposer({ isMyTurn, isProSide, currentStage }) {
-  const [secondsLeft, setSecondsLeft] = useState(30);
   const [composerTab, setComposerTab] = useState('greeting');
   const [composerGreeting, setComposerGreeting] = useState('');
   const [composerPosition, setComposerPosition] = useState('');
   const [composerConclusion, setComposerConclusion] = useState('');
   const [composerArguments, setComposerArguments] = useState(['']);
-
-  const timerDanger = secondsLeft <= 5;
-
-  useEffect(() => {
-    if (!isMyTurn) return;
-    const interval = window.setInterval(() => {
-      setSecondsLeft((prev) => (prev <= 1 ? 30 : prev - 1));
-    }, 1000);
-    return () => window.clearInterval(interval);
-  }, [isMyTurn]);
 
   const composerTabs = [
     { id: 'greeting', label: '인사말' },
@@ -140,11 +129,6 @@ export default function InputComposer({ isMyTurn, isProSide, currentStage }) {
               {currentStage === 4 ? '역할 반전: 반대측이었던 내가 찬성 입장으로 발언' : '종합: 판정단 분석 진행 중'}
             </div>
           )}
-        </div>
-        <div className={`shrink-0 flex items-center gap-1 text-[11px] font-extrabold px-3 py-1 rounded-full ${
-          timerDanger ? 'bg-rose-100 text-rose-600' : 'bg-stone-100 text-stone-500'
-        }`}>
-          <Timer size={12} /> 00:{String(secondsLeft).padStart(2, '0')}
         </div>
       </div>
 
