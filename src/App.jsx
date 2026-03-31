@@ -10,7 +10,7 @@ import TopHeader from './components/TopHeader';
 import HomeLanding from './pages/HomeLanding';
 import SubTopicView from './pages/SubTopicView';
 import ParamsView from './pages/ParamsView';
-import PreSurvey from './components/PreSurvey';
+import PreSurvey from './pages/PreSurvey';
 import PreQuiz from './pages/PreQuiz';
 import FloatingActionBar from './components/FloatingActionBar';
 
