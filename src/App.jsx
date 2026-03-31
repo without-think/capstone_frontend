@@ -9,7 +9,7 @@ import HomeLanding from './components/HomeLanding';
 import TopHeader from './components/TopHeader';
 import SubTopicView from './components/SubTopicView';
 import ParamsView from './components/ParamsView';
-import PreSurvey from './components/PreSurvey';
+import PreSurvey from './pages/PreSurvey';
 import PreQuiz from './components/PreQuiz';
 import FloatingActionBar from './components/FloatingActionBar';
 
