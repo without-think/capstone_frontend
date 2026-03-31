@@ -2,7 +2,16 @@ import { useState } from 'react';
 import { SendHorizonal, Mic, Plus, X } from 'lucide-react';
 import { MAX_ARGUMENT_TABS } from './mockData';
 
-export default function InputComposer({ isMyTurn, isProSide, currentStage }) {
+export default function InputComposer({
+  isMyTurn,
+  isProSide,
+  currentStage,
+  onSubmitOpening,
+  openingLoading,
+  openingError,
+  openingSubmitted,
+  openingComplete,
+}) {
   const [composerTab, setComposerTab] = useState('greeting');
   const [composerGreeting, setComposerGreeting] = useState('');
   const [composerPosition, setComposerPosition] = useState('');
@@ -70,6 +79,41 @@ export default function InputComposer({ isMyTurn, isProSide, currentStage }) {
     if (composerTab.startsWith('argument-')) {
       const current = Number(composerTab.split('-')[1]);
       if (current > indexToRemove) setComposerTab(`argument-${current - 1}`);
+    }
+  };
+
+  const buildOpeningContent = () => {
+    const sections = [
+      ['인사말', composerGreeting],
+      ['입장 표명', composerPosition],
+      ...composerArguments.map((value, index) => [`논거 ${index + 1}`, value]),
+      ['결론', composerConclusion],
+    ]
+      .map(([title, text]) => [title, (text ?? '').trim()])
+      .filter(([, text]) => text.length > 0);
+
+    return sections.map(([title, text]) => `## ${title}\n${text}`).join('\n\n');
+  };
+
+  const clearComposer = () => {
+    setComposerGreeting('');
+    setComposerPosition('');
+    setComposerConclusion('');
+    setComposerArguments(['']);
+    setComposerTab('greeting');
+  };
+
+  const handleSend = async () => {
+    if (currentStage !== 1 || !onSubmitOpening || openingLoading || openingSubmitted) return;
+
+    const content = buildOpeningContent();
+    if (!content) return;
+
+    try {
+      await onSubmitOpening(content);
+      clearComposer();
+    } catch {
+      // 실패 메시지는 상위 훅(error state)에서 노출
     }
   };
 
@@ -156,14 +200,28 @@ export default function InputComposer({ isMyTurn, isProSide, currentStage }) {
           />
         </div>
         <button className={`mt-auto flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-full text-white transition-all shadow-md hover:scale-105 ${
-          isProSide ? 'bg-blue-500 hover:bg-blue-600' : 'bg-rose-500 hover:bg-rose-600'
-        }`}>
+          (openingLoading || openingSubmitted || currentStage !== 1)
+            ? 'bg-stone-300 cursor-not-allowed'
+            : isProSide ? 'bg-blue-500 hover:bg-blue-600' : 'bg-rose-500 hover:bg-rose-600'
+        }`}
+          onClick={handleSend}
+          disabled={openingLoading || openingSubmitted || currentStage !== 1}
+          title={currentStage !== 1 ? '입론 단계에서만 제출할 수 있습니다.' : undefined}
+        >
           <SendHorizonal size={16} className="ml-0.5" />
         </button>
       </div>
 
       <div className="px-4 pb-2 text-[11px] font-medium text-stone-400">
-        논거 {composerArguments.length}/{MAX_ARGUMENT_TABS}
+        {openingError
+          ? `오류: ${openingError}`
+          : openingComplete
+            ? '입론 완료'
+            : openingLoading
+              ? 'AI 입론 생성 중'
+              : openingSubmitted
+                ? '입론 제출 완료'
+              : `논거 ${composerArguments.length}/${MAX_ARGUMENT_TABS}`}
       </div>
     </div>
   );

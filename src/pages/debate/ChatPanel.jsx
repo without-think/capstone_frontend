@@ -2,7 +2,17 @@ import { useEffect, useRef } from 'react';
 import SpeechBubble from './SpeechBubble';
 import InputComposer from './InputComposer';
 
-export default function ChatPanel({ logs, currentStage, isMyTurn, isProSide }) {
+export default function ChatPanel({
+  logs,
+  currentStage,
+  isMyTurn,
+  isProSide,
+  onSubmitOpening,
+  openingLoading,
+  openingError,
+  openingSubmitted,
+  openingComplete,
+}) {
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -39,6 +49,11 @@ export default function ChatPanel({ logs, currentStage, isMyTurn, isProSide }) {
               isMyTurn={isMyTurn}
               isProSide={isProSide}
               currentStage={currentStage}
+              onSubmitOpening={onSubmitOpening}
+              openingLoading={openingLoading}
+              openingError={openingError}
+              openingSubmitted={openingSubmitted}
+              openingComplete={openingComplete}
             />
           </div>
         </div>

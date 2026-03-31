@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 
 import ChatPanel from './ChatPanel';
@@ -26,7 +26,13 @@ export default function DebatePage({ onBack = () => console.log('back'), session
   const [stage3Cycle]   = useState(1);
   const [myTurnOverride, setMyTurnOverride] = useState(true);
 
-  const { logs } = useDebateLogs(sessionId);
+  const { logs, loading, error, submitOpening, openingSubmitted, openingComplete } = useDebateLogs(sessionId);
+
+  useEffect(() => {
+    if (openingComplete) {
+      setCurrentStage((prev) => (prev < 2 ? 2 : prev));
+    }
+  }, [openingComplete]);
 
   const isMyTurn  = currentStage < 5 && myTurnOverride;
   const isProSide = currentStage === 4;
@@ -82,6 +88,11 @@ export default function DebatePage({ onBack = () => console.log('back'), session
               currentStage={currentStage}
               isMyTurn={isMyTurn}
               isProSide={isProSide}
+              onSubmitOpening={submitOpening}
+              openingLoading={loading}
+              openingError={error}
+              openingSubmitted={openingSubmitted}
+              openingComplete={openingComplete}
             />
           </div>
 
