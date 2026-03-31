@@ -12,9 +12,14 @@ import ParamsView from './components/ParamsView';
 import PreSurvey from './components/PreSurvey';
 import PreQuiz from './components/PreQuiz';
 import FloatingActionBar from './components/FloatingActionBar';
+import DebatePage from './pages/debate/DebatePage';
 
 const App = () => {
-  const getInitialRoute = () => (window.location.pathname === '/topics' ? '/topics' : '/');
+  const getInitialRoute = () => {
+    if (window.location.pathname === '/topics') return '/topics';
+    if (window.location.pathname === '/debate') return '/debate';
+    return '/';
+  };
   const [routePath, setRoutePath] = useState(getInitialRoute);
   const [activeTopic, setActiveTopic] = useState(null);
   const [selectedSubTopics, setSelectedSubTopics] = useState([]);
@@ -36,6 +41,7 @@ const App = () => {
   const activeProAiCount = userStance === 'pro' ? agentCount - 1 : agentCount;
   const activeConAiCount = userStance === 'con' ? agentCount - 1 : agentCount;
   const isTopicSelectionRoute = routePath === '/topics';
+  const isDebateRoute = routePath === '/debate';
 
   const preDebateBackground = userStance === 'pro'
     ? 'linear-gradient(to bottom right, rgba(147,197,253,0.38), rgba(219,234,254,0.22), rgba(245,245,244,0.08))'
@@ -129,7 +135,7 @@ const App = () => {
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {!isTopicSelectionRoute && !activeTopic && (
+      {!isTopicSelectionRoute && !isDebateRoute && !activeTopic && (
         <HomeLanding onCreateDebate={() => navigate('/topics')} />
       )}
 
@@ -155,11 +161,20 @@ const App = () => {
         </div>
       </div>
 
+      {isDebateRoute && (
+        <DebatePage
+          activeData={activeData}
+          selectedSubTopics={selectedSubTopics}
+          userStance={userStance}
+          sessionId={sessionId}
+          onBack={() => navigate('/topics')}
+        />
+      )}
 
       {/* [3] 풀스크린 오버레이 */}
       <div
         className={`fixed inset-0 z-30 flex flex-col transition-all duration-700 delay-300
-        ${activeTopic ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        ${activeTopic && !isDebateRoute ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         style={stage < 4 ? { background: preDebateBackground } : undefined}
       >
         {/* 토론 페이지가 아닐 때만 네비 버튼 표시 */}
@@ -209,13 +224,13 @@ const App = () => {
           <PreQuiz
             topicId={activeTopic}
             visible={stage === 3}
-            onComplete={() => setStage(4)}
+            onComplete={() => navigate('/debate')}
           />
         </div>
       </div>
 
       {/* [4] 하단 플로팅 액션 바 - 참여설정(stage 1)에서만 표시 */}
-      {stage < 4 && <FloatingActionBar
+      {!isDebateRoute && stage < 4 && <FloatingActionBar
         selectedSubTopics={selectedSubTopics}
         stage={stage}
         userStance={userStance}
