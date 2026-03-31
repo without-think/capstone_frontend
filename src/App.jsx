@@ -228,6 +228,8 @@ const App = () => {
           />
           <PreQuiz
             topicId={activeTopic}
+            activeData={activeData}
+            selectedSubTopics={selectedSubTopics}
             visible={stage === 3}
             onComplete={() => navigate('/debate')}
           />
