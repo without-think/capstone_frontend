@@ -6,7 +6,6 @@ import StepperPanel from './StepperPanel';
 import AnalysisPanel from './AnalysisPanel';
 import NotePanel from './NotePanel';
 import { useDebateLogs } from './useDebateLogs';
-import FixedStage from '../../components/FixedStage';
 import {
   STAGE1_ORDER,
   STAGE2_ROUNDS,
@@ -63,51 +62,49 @@ export default function DebatePage({ onBack = () => console.log('back'), session
         .animate-subtle-pulse { animation: subtle-pulse 2s ease-in-out infinite; }
       `}</style>
 
-      <FixedStage baseWidth={1440} baseHeight={900}>
-        <main className="h-[900px] w-[1440px] p-4 relative">
+      <main className="h-full p-4 lg:p-5 relative max-w-[1920px] mx-auto">
 
-          {/* 뒤로가기 버튼 */}
-          <button
-            onClick={onBack}
-            className="absolute top-4 left-4 z-20 flex items-center justify-center w-8 h-8 rounded-full bg-white/80 shadow-sm text-stone-600 hover:scale-105 transition-transform"
-          >
-            <ArrowLeft size={16} />
-          </button>
+        {/* 뒤로가기 버튼 */}
+        <button
+          onClick={onBack}
+          className="absolute top-4 left-4 z-20 flex items-center justify-center w-8 h-8 rounded-full bg-white/80 shadow-sm text-stone-600 hover:scale-105 transition-transform"
+        >
+          <ArrowLeft size={16} />
+        </button>
 
-          {/* 메인 레이아웃 */}
-          <div className="grid grid-cols-[2.5fr_1fr] gap-4 h-full pl-10">
+        {/* 메인 레이아웃 */}
+        <div className="grid grid-cols-1 lg:grid-cols-[2.5fr_1fr] gap-4 h-full pl-10">
 
-            {/* 왼쪽: 채팅 패널 */}
-            <div className="flex flex-col h-full min-h-0">
-              <ChatPanel
-                logs={logs}
-                currentStage={currentStage}
-                isMyTurn={isMyTurn}
-                isProSide={isProSide}
-              />
-            </div>
-
-            {/* 오른쪽: 사이드바 */}
-            <aside className="flex flex-col gap-4 h-full min-h-0 overflow-y-auto hide-scrollbar">
-              <StepperPanel
-                currentStage={currentStage}
-                setCurrentStage={setCurrentStage}
-                getTurnDesc={getTurnDesc}
-                progress={progress}
-                isMyTurn={isMyTurn}
-                myTurnOverride={myTurnOverride}
-                setMyTurnOverride={setMyTurnOverride}
-              />
-              <AnalysisPanel
-                showLiveAnalysis={showLiveAnalysis}
-                analysis={analysis}
-              />
-              <NotePanel />
-            </aside>
-
+          {/* 왼쪽: 채팅 패널 */}
+          <div className="flex flex-col h-full min-h-0">
+            <ChatPanel
+              logs={logs}
+              currentStage={currentStage}
+              isMyTurn={isMyTurn}
+              isProSide={isProSide}
+            />
           </div>
-        </main>
-      </FixedStage>
+
+          {/* 오른쪽: 사이드바 */}
+          <aside className="flex flex-col gap-4 h-full min-h-0 overflow-y-auto hide-scrollbar">
+            <StepperPanel
+              currentStage={currentStage}
+              setCurrentStage={setCurrentStage}
+              getTurnDesc={getTurnDesc}
+              progress={progress}
+              isMyTurn={isMyTurn}
+              myTurnOverride={myTurnOverride}
+              setMyTurnOverride={setMyTurnOverride}
+            />
+            <AnalysisPanel
+              showLiveAnalysis={showLiveAnalysis}
+              analysis={analysis}
+            />
+            <NotePanel />
+          </aside>
+
+        </div>
+      </main>
     </div>
   );
 }
