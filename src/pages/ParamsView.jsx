@@ -1,5 +1,5 @@
 import { Check, SlidersHorizontal, ThumbsUp, ThumbsDown } from 'lucide-react';
-import AiSliderItem from './AiSliderItem';
+import AiSliderItem from '../components/AiSliderItem';
 
 const ParamsView = ({
   activeData,
