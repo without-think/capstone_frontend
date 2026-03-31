@@ -5,12 +5,13 @@ import { fetchTodayTopics } from './api/topicsApi';
 import { createSession } from './api/sessionsApi';
 import TopicGrid from './components/TopicGrid';
 import BackgroundBubbles from './components/BackgroundBubbles';
-import HomeLanding from './components/HomeLanding';
+import FixedStage from './components/FixedStage';
 import TopHeader from './components/TopHeader';
-import SubTopicView from './components/SubTopicView';
-import ParamsView from './components/ParamsView';
+import HomeLanding from './pages/HomeLanding';
+import SubTopicView from './pages/SubTopicView';
+import ParamsView from './pages/ParamsView';
 import PreSurvey from './components/PreSurvey';
-import PreQuiz from './components/PreQuiz';
+import PreQuiz from './pages/PreQuiz';
 import FloatingActionBar from './components/FloatingActionBar';
 
 const App = () => {
@@ -137,21 +138,25 @@ const App = () => {
       <div className={`absolute inset-0 px-4 transition-all duration-700 z-10 overflow-auto
         ${isTopicSelectionRoute && !activeTopic ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}
       >
-        <div className="mx-auto flex min-h-screen w-full max-w-[1440px] flex-col items-center pt-8 md:pt-0">
-          <TopHeader />
+        <div className="mx-auto flex min-h-screen w-full items-start justify-center pt-6 md:items-center md:pt-0">
+          <FixedStage baseWidth={1440} baseHeight={900}>
+            <div className="relative h-[900px] w-[1440px]">
+              <TopHeader />
 
-          <div className="mt-20 text-center md:mt-[96px]">
-            <h1 className="text-[38px] font-extrabold leading-tight tracking-[-0.03em] text-[#38332E] md:text-[48px] md:leading-[55px]">
-              어떤 주제에 대해 토론할까요?
-            </h1>
-            <p className="mt-4 text-[16px] font-medium text-[#393634] md:text-[18px] md:leading-[21px]">
-              원하는 카테고리를 선택하여 세부 논제를 확인해보세요.
-            </p>
-          </div>
+              <div className="pt-[96px] text-center">
+                <h1 className="text-[48px] font-extrabold leading-[55px] tracking-[-0.03em] text-[#38332E]">
+                  어떤 주제에 대해 토론할까요?
+                </h1>
+                <p className="mt-4 text-[18px] font-medium leading-[21px] text-[#393634]">
+                  원하는 카테고리를 선택하여 세부 논제를 확인해보세요.
+                </p>
+              </div>
 
-          <div className="mt-6 w-full min-w-[1200px] xl:-mt-1">
-            <TopicGrid onTopicClick={handleTopicClick} />
-          </div>
+              <div className="mt-6 w-full xl:-mt-1">
+                <TopicGrid onTopicClick={handleTopicClick} />
+              </div>
+            </div>
+          </FixedStage>
         </div>
       </div>
 

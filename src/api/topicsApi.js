@@ -1,7 +1,6 @@
 import { apiFetch } from './index';
 import { TOPICS } from '../data/topics';
 
-// API 카테고리명 → TOPICS id 매핑
 const buildTopicsWithApiData = (categories) => {
   return TOPICS.map((topic) => {
     const apiSubTopics = categories[topic.title];
