@@ -85,7 +85,7 @@ const PreQuiz = ({ visible, topicId: _topicId, activeData, selectedSubTopics = [
       className={`absolute inset-0 overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]
       ${!visible ? 'opacity-0 translate-x-32 pointer-events-none' : 'opacity-100 translate-x-0 delay-100'}`}
     >
-      <div className="mx-auto flex min-h-screen w-full items-start justify-center pt-6">
+      <div className="mx-auto flex min-h-screen w-full items-start justify-center">
         <FixedStage baseWidth={1320} baseHeight={820}>
           <div className="relative h-[820px] w-[1320px]">
             <div className="absolute inset-0 h-[820px] overflow-y-scroll hide-scrollbar px-[90px] pb-32 pt-6">

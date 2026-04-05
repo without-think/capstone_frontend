@@ -4,7 +4,7 @@ const getStageScale = (baseWidth, baseHeight) => {
   if (typeof window === 'undefined') return 1;
 
   const widthScale = window.innerWidth / baseWidth;
-  const heightScale = window.innerHeight / baseHeight;
+  const heightScale = (window.innerHeight - 8) / baseHeight;
 
   return Math.min(widthScale, heightScale, 1);
 };
@@ -34,6 +34,9 @@ const FixedStage = ({ baseWidth, baseHeight, children, className = '' }) => {
       >
         <div
           style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
             width: baseWidth,
             height: baseHeight,
             transform: `scale(${scale})`,
