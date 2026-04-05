@@ -19,10 +19,18 @@ export function renderMarkdown(text, isMine) {
   for (const line of lines) {
     if (line.startsWith('## ')) {
       elements.push(
-        <div key={key++} className={`font-bold text-[12px] mt-3 mb-0.5 pb-0.5 border-b ${
+        <div key={key++} className={`font-bold text-[15px] leading-tight mt-3 mb-1 pb-0.5 border-b ${
           isMine ? 'text-white/90 border-white/20' : 'text-stone-800 border-stone-200'
         }`}>
           {line.slice(3)}
+        </div>
+      );
+    } else if (line.startsWith('### ')) {
+      elements.push(
+        <div key={key++} className={`font-semibold text-[13px] leading-tight mt-2 mb-0.5 ${
+          isMine ? 'text-white/80' : 'text-stone-600'
+        }`}>
+          {line.slice(4)}
         </div>
       );
     } else if (line.trim() === '') {
