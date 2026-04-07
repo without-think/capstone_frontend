@@ -14,6 +14,13 @@ export default function ChatPanel({
   openingComplete,
 }) {
   const scrollRef = useRef(null);
+  const hasStage1Moderator = logs.some((log) => log.stage === 1 && log.moderator);
+  const openingModeratorGuide = {
+    id: 'opening-moderator-guide',
+    stage: 1,
+    moderator: true,
+    text: '1단계 입론입니다. 핵심 주장만 쓰지 말고, 웹검색으로 통계나 사례를 조금 찾아 근거를 보강해보세요. 확인한 자료가 있다면 논거에 자연스럽게 녹여서 발표하면 됩니다.',
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -28,6 +35,9 @@ export default function ChatPanel({
         ref={scrollRef}
         className="hide-scrollbar flex-1 overflow-y-auto p-4 space-y-4"
       >
+        {currentStage === 1 && !hasStage1Moderator && (
+          <SpeechBubble log={openingModeratorGuide} />
+        )}
         {logs
           .filter((log) => log.stage <= currentStage)
           .map((log) => (

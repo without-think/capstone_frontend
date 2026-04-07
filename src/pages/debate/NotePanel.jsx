@@ -5,15 +5,14 @@ export default function NotePanel() {
 
   return (
     <section className="rounded-[32px] border border-white/80 bg-white/60 p-5 backdrop-blur-md shadow-[0_12px_32px_rgba(0,0,0,0.04)]">
-      <div className="flex items-center justify-between gap-2 mb-4">
+      <div className="mb-4 flex items-center justify-between gap-2">
         <h3 className="text-[14px] font-extrabold text-stone-800">메모장</h3>
-        <span className="text-[11px] font-bold text-stone-400">Private</span>
       </div>
       <textarea
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder="핵심 키워드나 전략을 기록하세요."
-        className="w-full h-[170px] bg-white/80 rounded-[20px] p-4 text-[13px] font-medium leading-relaxed text-stone-600 placeholder:text-stone-300 resize-none focus:outline-none focus:ring-1 focus:ring-stone-200 hide-scrollbar shadow-inner"
+        className="hide-scrollbar h-[240px] w-full resize-none rounded-[20px] bg-white/80 p-4 text-[13px] font-medium leading-relaxed text-stone-700 placeholder:text-stone-300 shadow-inner focus:outline-none focus:ring-1 focus:ring-stone-200"
       />
     </section>
   );

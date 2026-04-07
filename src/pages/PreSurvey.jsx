@@ -1,9 +1,11 @@
 import { ExternalLink } from 'lucide-react';
 import { getSurveyLink } from '../config/surveyLinks';
 
-const PreSurvey = ({ visible, topicId, onComplete }) => {
+const PreSurvey = ({ visible, topicId, activeData, selectedSubTopics = [], onComplete }) => {
   const surveyUrl = getSurveyLink(topicId);
   const hasSurveyUrl = Boolean(surveyUrl);
+  const selectedSubTopic = activeData?.subTopics?.find((subTopic) => subTopic.title === selectedSubTopics[0]);
+  const topicLabel = selectedSubTopic?.title ?? selectedSubTopics[0] ?? activeData?.title ?? '주제 미선택';
 
   const handleOpenForm = () => {
     if (!hasSurveyUrl) return;
@@ -18,10 +20,10 @@ const PreSurvey = ({ visible, topicId, onComplete }) => {
       <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col justify-center px-6 pb-16 pt-4">
         <div className="mb-8 text-center">
           <span className="inline-block px-4 py-1 rounded-full bg-stone-100 text-stone-500 text-sm font-semibold mb-4">
-            사전 설문
+            {topicLabel}
           </span>
           <h2 className="text-4xl md:text-5xl font-extrabold text-stone-800 tracking-tight">
-            토론 전 사전 설문
+            사전 설문
           </h2>
           <p className="mt-4 text-[15px] font-medium leading-7 text-stone-500 md:text-[16px]">
             하단 설명을 참고하여 진행해 주세요.

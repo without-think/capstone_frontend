@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { HelpCircle } from 'lucide-react';
 import { ANALYSIS_LAYER_CONFIG } from './mockData';
 
 const RADAR_CENTER = { x: 110, y: 102 };
@@ -14,6 +16,8 @@ function polarToCartesian(angle, radius) {
 }
 
 export default function AnalysisPanel({ showLiveAnalysis, analysis }) {
+  const [showMetricGuide, setShowMetricGuide] = useState(false);
+
   const radarAxes = ANALYSIS_LAYER_CONFIG.map((layer, index) => ({
     ...layer,
     angle: RADAR_ANGLES[index],
@@ -28,10 +32,30 @@ export default function AnalysisPanel({ showLiveAnalysis, analysis }) {
     .join(' ') + ' Z';
 
   return (
-    <section className="rounded-[32px] border border-white/80 bg-white/60 p-5 backdrop-blur-md shadow-[0_12px_32px_rgba(0,0,0,0.04)]">
+    <section className="relative rounded-[32px] border border-white/80 bg-white/60 p-5 backdrop-blur-md shadow-[0_12px_32px_rgba(0,0,0,0.04)]">
       <div className="flex items-center justify-between gap-2 mb-4">
         <h3 className="text-[14px] font-extrabold text-stone-800">실시간 대립 분석기</h3>
+        <button
+          type="button"
+          onClick={() => setShowMetricGuide((prev) => !prev)}
+          className="flex h-6 w-6 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-500 transition-colors hover:bg-stone-50 hover:text-stone-700"
+          aria-label="지표 설명 보기"
+          title="지표 설명"
+        >
+          <HelpCircle size={14} />
+        </button>
       </div>
+
+      {showMetricGuide && (
+        <div className="absolute right-5 top-12 z-20 w-[280px] rounded-2xl border border-stone-200 bg-white/95 p-3 shadow-[0_14px_32px_rgba(0,0,0,0.12)] backdrop-blur-sm">
+          <p className="text-[12px] font-extrabold text-stone-700">지표 설명</p>
+          <div className="mt-2 space-y-2 text-[12px] leading-relaxed text-stone-600">
+            <p><span className="font-bold text-stone-800">충돌 강도:</span> 두 입장이 계속 영향을 주고받는다고 가정하고, 이를 반복 시뮬레이션해 수렴한 최종 충돌 강도입니다.</p>
+            <p><span className="font-bold text-stone-800">입장 거리:</span> 양측 입장이 서로 얼마나 반대 방향에 있는지를 나타냅니다.</p>
+            <p><span className="font-bold text-stone-800">공격성:</span> 상대 입장을 얼마나 강하게 밀어붙이고 압박하는 발화의 강도입니다.</p>
+          </div>
+        </div>
+      )}
 
       {showLiveAnalysis ? (
         <div className="h-[220px] bg-white/80 rounded-[20px] p-6 shadow-inner flex items-center justify-center">

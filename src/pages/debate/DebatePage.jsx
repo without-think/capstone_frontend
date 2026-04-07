@@ -9,8 +9,8 @@ import { useDebateLogs } from './useDebateLogs';
 import {
   STAGE1_ORDER,
   STAGE2_ROUNDS,
-  STAGE3_LOOP,
   STAGE3_MAX_CYCLES,
+  STAGE3_PAIRED_AGENT_LABEL,
   ANALYSIS_BY_STAGE,
 } from './mockData';
 
@@ -22,7 +22,6 @@ export default function DebatePage({ onBack = () => console.log('back'), session
   const [currentStage, setCurrentStage] = useState(1);
   const [stage1TurnIdx] = useState(3);
   const [stage2Round]   = useState(2);
-  const [stage3TurnIdx] = useState(3);
   const [stage3Cycle]   = useState(1);
   const [myTurnOverride, setMyTurnOverride] = useState(true);
 
@@ -40,7 +39,7 @@ export default function DebatePage({ onBack = () => console.log('back'), session
   const getTurnDesc = () => {
     if (currentStage === 1) return `입론 ${stage1TurnIdx + 1}/4 — ${STAGE1_ORDER[stage1TurnIdx].label} 발언 중`;
     if (currentStage === 2) return `연쇄 논박 ${STAGE2_ROUNDS[stage2Round].round}차 — ${STAGE2_ROUNDS[stage2Round].desc}`;
-    if (currentStage === 3) return `자유 논박 ${stage3Cycle}사이클 — ${STAGE3_LOOP[stage3TurnIdx].label} 발언 중`;
+    if (currentStage === 3) return `자유 논박 ${stage3Cycle}사이클 — 사용자 ↔ ${STAGE3_PAIRED_AGENT_LABEL}`;
     if (currentStage === 4) return '역할 반전 — 반대 2 (나) → 찬성측 논리 방어';
     return '판정단 분석 진행 중';
   };

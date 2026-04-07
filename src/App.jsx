@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, ChevronLeft } from 'lucide-react';
 import { TOPICS } from './data/topics';
 import { fetchTodayTopics } from './api/topicsApi';
@@ -30,6 +30,7 @@ const App = () => {
   const [aiStances, setAiStances] = useState({ pro: [5, 3, 1], con: [5, 3, 1] });
   const [topics, setTopics] = useState(TOPICS); // 기본값: 하드코딩 데이터 (API 실패 시 fallback)
   const [sessionId, setSessionId] = useState(null);
+  const debateEnterTimeoutRef = useRef(null);
 
   // 오늘의 주제 fetch
   useEffect(() => {
@@ -53,6 +54,10 @@ const App = () => {
     : 'transparent';
 
   const resetParams = () => {
+    if (debateEnterTimeoutRef.current) {
+      window.clearTimeout(debateEnterTimeoutRef.current);
+      debateEnterTimeoutRef.current = null;
+    }
     setStage(0);
     setUserStance(null);
     setAgentCount(1);
@@ -109,7 +114,13 @@ const App = () => {
     };
 
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (debateEnterTimeoutRef.current) {
+        window.clearTimeout(debateEnterTimeoutRef.current);
+        debateEnterTimeoutRef.current = null;
+      }
+    };
   }, []);
 
   const navigate = (path) => {
@@ -117,6 +128,17 @@ const App = () => {
       window.history.pushState({}, '', path);
     }
     setRoutePath(path);
+  };
+
+  const handleEnterDebate = () => {
+    setStage(4);
+    if (debateEnterTimeoutRef.current) {
+      window.clearTimeout(debateEnterTimeoutRef.current);
+    }
+    debateEnterTimeoutRef.current = window.setTimeout(() => {
+      debateEnterTimeoutRef.current = null;
+      navigate('/debate');
+    }, 420);
   };
 
   return (
@@ -222,6 +244,8 @@ const App = () => {
           />
           <PreSurvey
             topicId={activeTopic}
+            activeData={activeData}
+            selectedSubTopics={selectedSubTopics}
             userStance={userStance}
             visible={stage === 2}
             onComplete={() => setStage(3)}
@@ -231,8 +255,15 @@ const App = () => {
             activeData={activeData}
             selectedSubTopics={selectedSubTopics}
             visible={stage === 3}
-            onComplete={() => navigate('/debate')}
+            onComplete={handleEnterDebate}
           />
+          {stage === 4 && !isDebateRoute && (
+            <div className="absolute inset-0 flex items-center justify-center px-6">
+              <p className="text-center text-[44px] font-extrabold tracking-tight text-stone-800">
+                토론 방 생성 중 ...
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

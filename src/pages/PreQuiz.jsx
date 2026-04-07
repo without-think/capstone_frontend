@@ -1,226 +1,231 @@
-import { useState } from 'react';
-import { DEFAULT_PREQUIZ } from '../data/surveyData';
-import FixedStage from '../components/FixedStage';
+import { useMemo, useState } from 'react';
+import { Plus, X } from 'lucide-react';
 
-const OPTION_LABELS = ['O', 'X'];
+const EMPTY_STANCE_FORM = {
+  arguments: [''],
+  conclusion: '',
+};
 
-const SECTION_META = {
-  background: {
-    title: '사전 배경 문제',
-    tone: 'text-stone-500',
-  },
+const createInitialResponses = () => ({
+  pro: { ...EMPTY_STANCE_FORM, arguments: [''] },
+  con: { ...EMPTY_STANCE_FORM, arguments: [''] },
+});
+
+const STANCE_META = {
   pro: {
-    title: '찬성 진영 관점',
-    tone: 'text-blue-500',
+    badge: '찬성',
+    tone: 'text-blue-600',
+    ring: 'border-blue-100',
+    soft: 'bg-blue-50/70',
+    panel: 'from-blue-50/85 via-white to-white',
+    accent: 'bg-blue-500',
   },
   con: {
-    title: '반대 진영 관점',
-    tone: 'text-rose-500',
+    badge: '반대',
+    tone: 'text-rose-600',
+    ring: 'border-rose-100',
+    soft: 'bg-rose-50/70',
+    panel: 'from-rose-50/85 via-white to-white',
+    accent: 'bg-rose-500',
   },
 };
 
-const PreQuiz = ({ visible, topicId: _topicId, activeData, selectedSubTopics = [], onComplete }) => {
-  const questions = DEFAULT_PREQUIZ;
-  const [answers, setAnswers] = useState({});
-  const selectedSubTopic = activeData?.subTopics?.find((subTopic) => subTopic.title === selectedSubTopics[0]);
-  const sectionedQuestions = [
-    {
-      key: 'background',
-      title: SECTION_META.background.title,
-      questions: questions.filter((question) => question.section === 'background'),
-    },
-    {
-      key: 'pro',
-      title: SECTION_META.pro.title,
-      subtitle: `"${selectedSubTopic?.pro ?? '찬성'}"의 입장에서 선택해주세요`,
-      questions: questions.filter((question) => question.section === 'pro'),
-    },
-    {
-      key: 'con',
-      title: SECTION_META.con.title,
-      subtitle: `"${selectedSubTopic?.con ?? '반대'}"의 입장에서 선택해주세요`,
-      questions: questions.filter((question) => question.section === 'con'),
-    },
-  ];
-  const backgroundSection = sectionedQuestions.find((section) => section.key === 'background');
-  const stanceSections = sectionedQuestions.filter((section) => section.key !== 'background');
+function StanceSection({
+  stanceKey,
+  title,
+  prompt,
+  form,
+  autoConclusion,
+  onArgumentChange,
+  onAddArgument,
+  onRemoveArgument,
+}) {
+  const meta = STANCE_META[stanceKey];
 
-  const answeredCount = Object.keys(answers).length;
-  const canSubmit = answeredCount === questions.length;
+  return (
+    <section className={`rounded-[28px] border border-white/90 bg-gradient-to-br ${meta.panel} px-4 py-4 backdrop-blur-md shadow-[0_18px_40px_rgba(0,0,0,0.08)] sm:rounded-[32px] sm:px-5 sm:py-5 lg:rounded-[36px] lg:px-6 lg:py-6`}>
+      <div className="mb-5">
+        <div>
+          <h3 className={`text-[24px] font-extrabold tracking-tight sm:text-[26px] lg:text-[30px] ${meta.tone}`}>
+            {title}
+          </h3>
+          <p className="mt-2 text-[14px] font-medium leading-relaxed text-stone-500 sm:text-[15px]">
+            {prompt}
+          </p>
+        </div>
+      </div>
 
-  const handleSelect = (questionId, selected) => {
-    setAnswers((prev) => ({
+      <div className="space-y-5">
+        <div className="space-y-3.5">
+          {form.arguments.map((argument, index) => (
+            <div
+              key={`${stanceKey}-argument-${index}`}
+              className={`rounded-[20px] border bg-white/95 px-4 py-3.5 shadow-[0_10px_24px_rgba(0,0,0,0.05)] sm:rounded-[24px] sm:px-5 sm:py-4 ${meta.ring}`}
+            >
+              <div className="mb-2.5 flex items-center justify-between gap-3">
+                <label className="text-[14px] font-bold text-stone-600">
+                  {`논거 ${index + 1}`}
+                </label>
+                {form.arguments.length > 1 && index > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onRemoveArgument(index)}
+                    className="rounded-full p-1.5 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600"
+                    aria-label={`논거 ${index + 1} 삭제`}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              <textarea
+                value={argument}
+                onChange={(e) => onArgumentChange(index, e.target.value)}
+                placeholder=""
+                className="hide-scrollbar min-h-[96px] w-full resize-none bg-transparent text-[15px] font-medium leading-relaxed text-stone-800 placeholder:text-stone-400 focus:outline-none sm:min-h-[108px] sm:text-[16px]"
+              />
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={onAddArgument}
+            className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-4 py-2.5 text-[13px] font-bold text-stone-600 shadow-sm transition-all hover:scale-105 hover:border-stone-300 hover:bg-stone-50"
+          >
+            <Plus size={14} />
+            논거 추가
+          </button>
+        </div>
+
+        <p className="border-t border-stone-200/80 pt-4 text-[16px] font-semibold leading-relaxed text-stone-700 sm:text-[17px]">
+          <span className="mr-2 font-extrabold text-stone-800">따라서</span>
+          {autoConclusion}
+        </p>
+      </div>
+    </section>
+  );
+}
+
+const PreQuiz = ({ visible, activeData, selectedSubTopics = [], onComplete }) => {
+  const [responses, setResponses] = useState(createInitialResponses);
+
+  const selectedSubTopic = activeData?.subTopics?.find(
+    (subTopic) => subTopic.title === selectedSubTopics[0],
+  );
+
+  const stanceTitles = useMemo(
+    () => ({
+      pro: selectedSubTopic?.pro ?? '찬성측 입장',
+      con: selectedSubTopic?.con ?? '반대측 입장',
+    }),
+    [selectedSubTopic],
+  );
+  const topicLabel = selectedSubTopic?.title ?? selectedSubTopics[0] ?? activeData?.title ?? '주제 미선택';
+
+  const updateStance = (stanceKey, updater) => {
+    setResponses((prev) => ({
       ...prev,
-      [questionId]: selected,
+      [stanceKey]: updater(prev[stanceKey]),
     }));
   };
+
+  const handleArgumentChange = (stanceKey, index, value) => {
+    updateStance(stanceKey, (prevStance) => ({
+      ...prevStance,
+      arguments: prevStance.arguments.map((item, itemIndex) => (
+        itemIndex === index ? value : item
+      )),
+    }));
+  };
+
+  const handleAddArgument = (stanceKey) => {
+    updateStance(stanceKey, (prevStance) => ({
+      ...prevStance,
+      arguments: [...prevStance.arguments, ''],
+    }));
+  };
+
+  const handleRemoveArgument = (stanceKey, indexToRemove) => {
+    updateStance(stanceKey, (prevStance) => ({
+      ...prevStance,
+      arguments: prevStance.arguments.length === 1
+        ? prevStance.arguments
+        : prevStance.arguments.filter((_, index) => index !== indexToRemove),
+    }));
+  };
+
+  const normalizedResponses = useMemo(() => ({
+    pro: {
+      arguments: responses.pro.arguments.map((item) => item.trim()).filter(Boolean),
+      conclusion: stanceTitles.pro,
+    },
+    con: {
+      arguments: responses.con.arguments.map((item) => item.trim()).filter(Boolean),
+      conclusion: stanceTitles.con,
+    },
+  }), [responses, stanceTitles]);
+
+  const canSubmit = true;
 
   const handleComplete = () => {
     if (!canSubmit) return;
-
-    const result = questions.map((question) => ({
-      questionId: question.id,
-      selected: answers[question.id],
-      correct: answers[question.id] === question.answer,
-    }));
-
-    onComplete(result);
-  };
-
-  const getOptionStyle = (questionId, idx) => {
-    const selected = answers[questionId];
-    if (selected === undefined) {
-      return 'bg-white border-stone-200 text-stone-700 hover:border-stone-400 hover:shadow-md';
-    }
-    if (selected === idx) {
-      return idx === 0
-        ? 'bg-blue-600 border-blue-600 text-white'
-        : 'bg-rose-600 border-rose-600 text-white';
-    }
-    return 'bg-stone-50 border-stone-100 text-stone-300';
+    onComplete(normalizedResponses);
   };
 
   return (
     <div
-      className={`absolute inset-0 overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]
+      className={`hide-scrollbar absolute inset-0 overflow-y-auto transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]
       ${!visible ? 'opacity-0 translate-x-32 pointer-events-none' : 'opacity-100 translate-x-0 delay-100'}`}
     >
-      <div className="mx-auto flex min-h-screen w-full items-start justify-center">
-        <FixedStage baseWidth={1320} baseHeight={820}>
-          <div className="relative h-[820px] w-[1320px]">
-            <div className="absolute inset-0 h-[820px] overflow-y-scroll hide-scrollbar px-[90px] pb-32 pt-6">
-              <div className="mx-auto w-[1140px]">
-              <div className="mb-5 text-center">
-                <span className="mb-2 inline-block rounded-full bg-stone-100/90 px-4 py-1 text-sm font-semibold text-stone-500">
-                  사전 퀴즈
-                </span>
-                <h2 className="text-[24px] font-extrabold tracking-tight text-stone-800">
-                  주제 관련 지식 확인
-                </h2>
-                <p className="mt-1 text-[13px] font-medium text-stone-500">
-                  아래 모든 문항에 O/X로 답해주세요
-                </p>
-              </div>
+      <div className="mx-auto flex min-h-full w-full max-w-7xl flex-col px-4 pb-20 pt-4 sm:px-6 lg:px-8">
+        <div className="mb-5 text-center">
+          <span className="mb-2 inline-block rounded-full bg-stone-100/90 px-4 py-1 text-sm font-semibold text-stone-500">
+            {topicLabel}
+          </span>
+          <h2 className="text-[30px] font-extrabold tracking-tight text-stone-800 sm:text-[34px] lg:text-[38px]">
+            사전 근거 작성
+          </h2>
+          <p className="mx-auto mt-3 max-w-4xl text-[14px] font-medium leading-relaxed text-stone-500 sm:text-[15px] lg:text-[16px]">
+            대략적인 검색이나 사전조사 없이, 지금 알고 있는 내용만으로 근거를 작성해주세요. 각 칸에는 현재 알고 있는 논거만 적고, 없으면 비워두셔도 됩니다.
+          </p>
+        </div>
 
-              <div className="mb-4 flex w-full items-center justify-between rounded-[32px] border border-white/80 bg-white/78 px-5 py-3 backdrop-blur-md shadow-[0_16px_32px_rgba(0,0,0,0.08)]">
-                <p className="text-sm font-semibold tracking-[0.02em] text-stone-500">진행 현황</p>
-                <span className="text-sm font-bold text-stone-600">
-                  {answeredCount} / {questions.length}
-                </span>
-              </div>
+        <div className="grid grid-cols-1 items-start gap-4 lg:gap-6 xl:grid-cols-2">
+          <StanceSection
+            stanceKey="pro"
+            title="찬성측"
+            prompt='“찬성측” 근거에 대해 최대한 자세히 적으세요.'
+            form={responses.pro}
+            autoConclusion={stanceTitles.pro}
+            onArgumentChange={(index, value) => handleArgumentChange('pro', index, value)}
+            onAddArgument={() => handleAddArgument('pro')}
+            onRemoveArgument={(index) => handleRemoveArgument('pro', index)}
+          />
 
-              <div className="flex flex-col gap-5">
-                {backgroundSection && (
-                  <section
-                    key={backgroundSection.key}
-                    className="rounded-[32px] border border-white/80 bg-white/70 px-4 py-4 backdrop-blur-md shadow-[0_16px_32px_rgba(0,0,0,0.08)]"
-                  >
-                    <div className="mb-3 px-1">
-                      <p className={`text-[13px] font-extrabold tracking-[0.14em] uppercase ${SECTION_META[backgroundSection.key].tone}`}>
-                        {backgroundSection.title}
-                      </p>
-                    </div>
+          <StanceSection
+            stanceKey="con"
+            title="반대측"
+            prompt='“반대측” 근거에 대해 최대한 자세히 적으세요.'
+            form={responses.con}
+            autoConclusion={stanceTitles.con}
+            onArgumentChange={(index, value) => handleArgumentChange('con', index, value)}
+            onAddArgument={() => handleAddArgument('con')}
+            onRemoveArgument={(index) => handleRemoveArgument('con', index)}
+          />
+        </div>
 
-                    <div className="grid auto-rows-fr grid-cols-2 gap-3">
-                      {backgroundSection.questions.map((question) => {
-                        const questionNumber = questions.findIndex((item) => item.id === question.id) + 1;
-                        return (
-                          <div
-                            key={question.id}
-                            className="flex h-full min-h-[212px] flex-col rounded-[26px] border border-white/80 bg-white/94 px-5 py-4 shadow-[0_10px_24px_rgba(0,0,0,0.08)]"
-                          >
-                            <span className="mb-2 inline-block text-[11px] font-bold uppercase tracking-widest text-stone-400">
-                              Q{questionNumber}
-                            </span>
-                            <p className="min-h-[72px] text-[16px] font-semibold leading-snug text-stone-800">
-                              {question.text}
-                            </p>
-
-                            <div className="mt-auto grid grid-cols-2 gap-3 pt-4">
-                              {(question.options ?? OPTION_LABELS).map((opt, idx) => (
-                                <button
-                                  key={idx}
-                                  onClick={() => handleSelect(question.id, idx)}
-                                  className={`flex h-[54px] items-center justify-center rounded-[20px] border-2 px-4 text-center text-[15px] font-bold transition-all duration-200 ${getOptionStyle(question.id, idx)}`}
-                                >
-                                  {opt}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </section>
-                )}
-
-                <div className="grid grid-cols-2 gap-5">
-                  {stanceSections.map((section) => (
-                    <section
-                      key={section.key}
-                      className="rounded-[32px] border border-white/80 bg-white/70 px-4 py-4 backdrop-blur-md shadow-[0_16px_32px_rgba(0,0,0,0.08)]"
-                    >
-                      <div className="mb-3 px-1">
-                        <p className={`text-[13px] font-extrabold tracking-[0.14em] uppercase ${SECTION_META[section.key].tone}`}>
-                          {section.title}
-                        </p>
-                        <p className="mt-1 text-[14px] font-semibold text-stone-600">
-                          {section.subtitle}
-                        </p>
-                      </div>
-
-                      <div className="grid auto-rows-fr grid-cols-1 gap-3">
-                        {section.questions.map((question) => {
-                          const questionNumber = questions.findIndex((item) => item.id === question.id) + 1;
-                          return (
-                            <div
-                              key={question.id}
-                              className="flex h-full min-h-[212px] flex-col rounded-[26px] border border-white/80 bg-white/94 px-5 py-4 shadow-[0_10px_24px_rgba(0,0,0,0.08)]"
-                            >
-                              <span className="mb-2 inline-block text-[11px] font-bold uppercase tracking-widest text-stone-400">
-                                Q{questionNumber}
-                              </span>
-                              <p className="min-h-[72px] text-[16px] font-semibold leading-snug text-stone-800">
-                                {question.text}
-                              </p>
-
-                              <div className="mt-auto grid grid-cols-2 gap-3 pt-4">
-                                {(question.options ?? OPTION_LABELS).map((opt, idx) => (
-                                  <button
-                                    key={idx}
-                                    onClick={() => handleSelect(question.id, idx)}
-                                    className={`flex h-[54px] items-center justify-center rounded-[20px] border-2 px-4 text-center text-[15px] font-bold transition-all duration-200 ${getOptionStyle(question.id, idx)}`}
-                                  >
-                                    {opt}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </section>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-5 flex w-full justify-end rounded-[32px] border border-white/80 bg-white/78 px-5 py-3 backdrop-blur-md shadow-[0_16px_32px_rgba(0,0,0,0.08)]">
-                <button
-                  onClick={handleComplete}
-                  disabled={!canSubmit}
-                  className={`rounded-full px-10 py-3.5 text-base font-bold transition-all duration-300 ${
-                    canSubmit
-                      ? 'cursor-pointer bg-stone-900 text-white shadow-lg hover:scale-105 hover:bg-black'
-                      : 'cursor-not-allowed bg-stone-100 text-stone-300'
-                  }`}
-                >
-                  퀴즈 완료 →
-                </button>
-              </div>
-              </div>
-            </div>
-          </div>
-        </FixedStage>
+        <div className="mt-6 flex w-full justify-center rounded-[24px] border border-white/80 bg-white/82 px-4 py-3 backdrop-blur-md shadow-[0_16px_32px_rgba(0,0,0,0.08)] sm:justify-end sm:rounded-[32px] sm:px-5">
+          <button
+            type="button"
+            onClick={handleComplete}
+            disabled={!canSubmit}
+            className={`w-full rounded-full px-8 py-3 text-sm font-bold transition-all duration-300 sm:w-auto sm:px-10 sm:py-3.5 sm:text-base ${
+              canSubmit
+                ? 'cursor-pointer bg-stone-900 text-white shadow-lg hover:scale-105 hover:bg-black'
+                : 'cursor-not-allowed bg-stone-100 text-stone-300'
+            }`}
+          >
+            작성 완료 →
+          </button>
+        </div>
       </div>
     </div>
   );
