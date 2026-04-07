@@ -18,7 +18,7 @@ export default function SpeechBubble({ log }) {
   }
 
   const speakerLabel = log.speaker ?? '';
-  const isMine = speakerLabel.includes('나') || speakerLabel === '사용자' || log.targetId === 'agent_1';
+  const isMine = speakerLabel.includes('나') || speakerLabel === '사용자';
   const sideLabel = log.side === 'pro' ? '찬성' : log.side === 'con' ? '반대' : '중립';
   const compressSpeakerLabel = (label) => {
     const normalized = label ?? '';
@@ -38,11 +38,12 @@ export default function SpeechBubble({ log }) {
   const getSpeakerDisplay = () => {
     if (speakerLabel === 'agent_1') return '반 1';
     if (speakerLabel === 'agent_2') return '반 2';
+    if (speakerLabel === 'agent_3') return '찬 1';
     if (speakerLabel === '사용자') return `나(${sideLabel})`;
     if (speakerLabel.includes('나')) return speakerLabel;
     return speakerLabel;
   };
-  const displaySpeaker = isMine ? `나(${sideLabel})` : (log.speaker ?? '토론자');
+  const displaySpeaker = isMine ? `나(${sideLabel})` : getSpeakerDisplay();
   const speakerShortLabel = isMine
     ? '나'
     : compressSpeakerLabel(getSpeakerDisplay());

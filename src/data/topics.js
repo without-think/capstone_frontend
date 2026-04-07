@@ -12,10 +12,27 @@ export const TOPICS = [
     icon: Cpu,
     subTopics: [
       {
-        title: '생성형 AI 기술의 급속한 발전에 대응하기 위해 정부 주도의 법적 규제 도입이 시급하다',
-        description: '챗GPT 등 생성형 AI 기술의 급속한 확산에 따라, 정부가 AI 개발 및 서비스에 규제를 도입해야 하는지를 두고 혁신 촉진과 안전·윤리적 통제 사이의 입장이 맞서는 주제입니다.',
-        pro: '자율 혁신이 기술 발전을 이끈다',
-        con: '무규제는 사회적 위협을 초래한다',
+        id: 'tech_001',
+        title: '인공지능 발전은 인간 고용의 축소가 아닌 노동 시장의 재편이다',
+        description: '인공지능이 인간 고용을 축소시키는 위협인지, 아니면 노동 시장을 재편하며 새로운 기회를 만드는 변화인지 맞서는 주제입니다.',
+        description_short: '인공지능이 인간 고용을 축소시키는 위협인지, 아니면 노동 시장을 재편하며 새로운 기회를 만드는 변화인지 맞서는 주제입니다.',
+        description_long: '이 논제는 AI가 인간의 일자리를 줄이는 기술인지, 아니면 기존 업무를 재편하면서 새로운 직무와 산업을 만들어내는 기술인지를 묻는다.\n\n세계경제포럼은 2030년까지 AI로 사라지는 일자리보다 새로 생기는 일자리가 더 많을 수 있다고 전망했지만, 동시에 많은 기업은 반복적 사무·초급 업무의 축소도 예상하고 있다.\n\n따라서 이 논제의 핵심은 AI가 고용을 단순히 줄이는 것인지, 아니면 노동 시장의 구조 자체를 변화시키며 새로운 형태의 고용을 만들어내는 것인지에 대한 논쟁이다.',
+        pro: '노동 시장의 재편이다',
+        con: '인간 고용의 축소이다',
+        references: [
+          {
+            title: 'The AI-driven workforce is here. How should your industry transform itself?',
+            url: 'https://www.weforum.org/stories/2026/02/workforce-transformation-ai-jobs/',
+          },
+          {
+            title: 'Generative AI and jobs: A 2025 update',
+            url: 'https://www.ilo.org/publications/generative-ai-and-jobs-2025-update',
+          },
+          {
+            title: 'Future of Jobs Report 2025: The jobs of the future - and the skills you need to get them',
+            url: 'https://www.weforum.org/stories/2025/01/future-of-jobs-report-2025-jobs-of-the-future-and-the-skills-you-need-to-get-them/',
+          },
+        ],
       },
       {
         title: 'AI가 독자적으로 생성한 창작물에도 인간 저작물과 동일한 법적 저작권을 인정해야 한다',
