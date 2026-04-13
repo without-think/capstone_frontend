@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MOCK_SPEECH_LOGS, STAGE1_ORDER } from './mockData';
-import { submitUserOpening } from '../../api/debatesApi';
 import { buildApiUrl } from '../../api';
 
 // ── 글자 길이 기반 랜덤 딜레이 ────────────────────────────────────────────────
@@ -11,18 +10,44 @@ function getRenderDelay(text) {
   return base + byLength + jitter;
 }
 
-/**
- * SSE 수신 시 speakerId + stance → 표시 라벨 변환 (agentCount 기반 동적 매핑)
- *
- * 규칙:
- *   con  측 AI: agent_1 ~ agent_N           → "반대 1" ~ "반대 N"
- *   pro  측 AI: agent_(N+1) ~ agent_(2N-1)  → "찬성 1" ~ "찬성 (N-1)"
- *   사용자:     "나"
- *
- * @param {string} speakerId  - e.g. "agent_1", "agent_5", "user"
- * @param {string} stance     - "pro" | "con"
- * @param {number} agentCount - 1:1=1, 2:2=2, 3:3=3
- */
+// ── fetch 기반 SSE 읽기 (POST 지원) ─────────────────────────────────────────
+// EventSource는 GET만 지원하므로 fetch + ReadableStream으로 구현
+async function* readSSE(url, options, signal) {
+  const res = await fetch(url, { ...options, signal });
+  if (!res.ok) throw new Error(`SSE ${res.status}: ${url}`);
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      // SSE는 빈 줄('\n\n')로 이벤트를 구분
+      const blocks = buffer.split('\n\n');
+      buffer = blocks.pop(); // 마지막 미완성 블록은 다음 청크로 이월
+
+      for (const block of blocks) {
+        if (!block.trim()) continue;
+        const lines = block.split('\n');
+        let eventType = 'message';
+        let data = '';
+        for (const line of lines) {
+          if (line.startsWith('event:')) eventType = line.slice(6).trim();
+          else if (line.startsWith('data:')) data += line.slice(5).trim();
+        }
+        if (data) yield { type: eventType, data };
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+// ── SSE entry → log 객체 변환 ────────────────────────────────────────────────
 function getAgentLabel(speakerId, stance, agentCount) {
   if (!speakerId) return 'AI';
   if (speakerId === 'user' || speakerId === '사용자') return '나';
@@ -30,61 +55,68 @@ function getAgentLabel(speakerId, stance, agentCount) {
   if (!match) return speakerId;
   const num = parseInt(match[1], 10);
   if (stance === 'con') return `반대 ${num}`;
-  const proIndex = num - agentCount;
-  return `찬성 ${proIndex}`;
+  return `찬성 ${num - agentCount}`;
+}
+
+function buildLogFromSSE(raw, agentCount) {
+  const stance = raw.stance?.toLowerCase() ?? 'pro';
+  return {
+    id: raw.turn ?? `entry-${Date.now()}`,
+    stage: raw.stage ?? 1,
+    side: stance,
+    speaker: getAgentLabel(raw.speakerId, stance, agentCount),
+    type: raw.type ?? '입론',
+    turnNumber: raw.turn,
+    text: raw.content,
+  };
 }
 
 /**
- * 토론 로그 훅 — 에이전트 발언을 큐로 순차 렌더링하고 마지막에 사용자 입력을 받는다.
+ * 토론 로그 훅
+ *
+ * @param {object|null} debateParams  - null이면 Mock 모드, object이면 SSE 모드
+ *   SSE 모드 예시: { topicId, agentCount, userStance, ... }
+ * @param {number} agentCount
+ * @param {string} userStance  - 'pro' | 'con'
  *
  * 반환값:
- *   logs             — 현재 화면에 표시할 로그 배열
+ *   logs             — 화면에 표시할 로그 배열
  *   isTyping         — 타이핑 중인 발화자 이름 (null이면 미표시)
- *   awaitingUserTurn — 에이전트 큐가 끝나 사용자 입력을 받을 수 있는 상태
- *   openingComplete  — 사용자가 입론을 제출해 입론 단계가 끝난 상태
+ *   awaitingUserTurn — 사용자 입력 받을 수 있는 상태
+ *   openingComplete  — 입론 단계 완료
+ *   debateComplete   — 전체 토론 완료
+ *   sessionId        — SSE에서 수신한 세션 ID (mock은 null)
  *   error            — 오류 메시지
  *   submitOpening    — 사용자 입론 제출 함수
  */
-export function useDebateLogs(sessionId, agentCount = 2, userStance = 'pro') {
+export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro') {
   const [visibleLogs, setVisibleLogs] = useState([]);
-  const [isTyping, setIsTyping] = useState(null);          // null | string
+  const [isTyping, setIsTyping] = useState(null);
   const [awaitingUserTurn, setAwaitingUserTurn] = useState(false);
   const [openingComplete, setOpeningComplete] = useState(false);
   const [debateComplete, setDebateComplete] = useState(false);
   const [error, setError] = useState(null);
+  const [sessionId, setSessionId] = useState(null);
 
   const queueRef = useRef([]);
   const isPlayingRef = useRef(false);
   const queueAwaitUserRef = useRef(false);
   const queueOnCompleteRef = useRef(null);
   const timerRef = useRef(null);
-  const esRef = useRef(null);
+  const abortRef = useRef(null);
 
   // ── 타이머 정리 ─────────────────────────────────────────────────────────────
   const clearTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  }, []);
-
-  // ── SSE 정리 ────────────────────────────────────────────────────────────────
-  const closeEventSource = useCallback(() => {
-    if (esRef.current) {
-      esRef.current.close();
-      esRef.current = null;
-    }
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
   }, []);
 
   // ── 큐 재생 ─────────────────────────────────────────────────────────────────
-  // useRef로 최신 함수 참조를 유지해 stale closure를 방지한다
   const playNextRef = useRef(null);
   playNextRef.current = () => {
     if (queueRef.current.length === 0) {
       isPlayingRef.current = false;
       setIsTyping(null);
       setAwaitingUserTurn(queueAwaitUserRef.current);
-      // 큐 완료 콜백 실행
       const cb = queueOnCompleteRef.current;
       queueOnCompleteRef.current = null;
       cb?.();
@@ -102,32 +134,27 @@ export function useDebateLogs(sessionId, agentCount = 2, userStance = 'pro') {
       return;
     }
 
-    // 타이핑 인디케이터 표시
     setIsTyping(next.speaker ?? '...');
-
     const delay = getRenderDelay(next.text ?? '');
     timerRef.current = setTimeout(() => {
       setIsTyping(null);
       setVisibleLogs((prev) => [...prev, next]);
-      // 다음 메시지 전 짧은 pause
       timerRef.current = setTimeout(() => playNextRef.current?.(), 350);
     }, delay);
   };
 
-  const startQueue = useCallback((agentLogs, options = {}) => {
-    queueRef.current = [...agentLogs];
+  const startQueue = useCallback((logs, options = {}) => {
+    queueRef.current = [...logs];
     queueAwaitUserRef.current = options.awaitUser ?? false;
     queueOnCompleteRef.current = options.onComplete ?? null;
     setAwaitingUserTurn(false);
-    if (!isPlayingRef.current) {
-      playNextRef.current?.();
-    }
+    if (!isPlayingRef.current) playNextRef.current?.();
   }, []);
 
   // ── 상태 초기화 ─────────────────────────────────────────────────────────────
   const resetState = useCallback(() => {
     clearTimer();
-    closeEventSource();
+    abortRef.current?.abort();
     queueRef.current = [];
     isPlayingRef.current = false;
     queueAwaitUserRef.current = false;
@@ -138,11 +165,12 @@ export function useDebateLogs(sessionId, agentCount = 2, userStance = 'pro') {
     setOpeningComplete(false);
     setDebateComplete(false);
     setError(null);
-  }, [clearTimer, closeEventSource]);
+    setSessionId(null);
+  }, [clearTimer]);
 
   // ── Mock 모드 ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (sessionId) return;
+    if (debateParams) return;
 
     resetState();
 
@@ -152,80 +180,73 @@ export function useDebateLogs(sessionId, agentCount = 2, userStance = 'pro') {
       (l) => l.stage === 1 && !l.moderator && l.turnNumber !== userTurnIdx,
     );
 
-    // 사회자 발언은 즉시 표시
     setVisibleLogs(moderatorLogs);
-
-    // 짧은 초기 지연 후 에이전트 큐 시작
     timerRef.current = setTimeout(() => {
       startQueue(agentLogs, { awaitUser: true });
     }, 800);
 
     return () => clearTimer();
-  }, [sessionId, resetState, startQueue, clearTimer]);
+  }, [debateParams, resetState, startQueue, clearTimer]);
 
-  // ── SSE 모드 ─────────────────────────────────────────────────────────────────
+  // ── SSE 모드: POST /api/debates ──────────────────────────────────────────────
+  // debateParams가 있으면 fetch+ReadableStream으로 SSE 수신
   useEffect(() => {
-    if (!sessionId) return;
+    if (!debateParams) return;
 
     resetState();
 
-    const es = new EventSource(buildApiUrl(`/api/debates/${sessionId}/opening/run`));
-    esRef.current = es;
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
 
-    es.onmessage = (event) => {
-      let raw;
-      try { raw = JSON.parse(event.data); } catch { return; }
+    (async () => {
+      try {
+        for await (const { type, data } of readSSE(
+          buildApiUrl('/api/debates'),
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+            body: JSON.stringify(debateParams),
+          },
+          ctrl.signal,
+        )) {
+          const raw = JSON.parse(data);
 
-      if (raw.type === 'done') {
-        closeEventSource();
-        return;
+          if (type === 'session') {
+            // 첫 번째 이벤트: 세션 ID 수신
+            setSessionId(raw.sessionId);
+          } else if (type === 'entry') {
+            const log = buildLogFromSSE(raw, agentCount);
+            queueRef.current.push(log);
+            if (!isPlayingRef.current) playNextRef.current?.();
+          } else if (type === 'waiting') {
+            // isFinished: true → 토론 종료, false → 사용자 입력 대기
+            if (raw.isFinished) {
+              setDebateComplete(true);
+            } else {
+              queueAwaitUserRef.current = true;
+              if (!isPlayingRef.current) setAwaitingUserTurn(true);
+            }
+          }
+        }
+      } catch (e) {
+        if (e.name !== 'AbortError') setError(e?.message ?? 'SSE 연결 오류');
       }
+    })();
 
-      // SSE로 받은 로그를 큐에 추가하고 큐 재생
-      const stance = raw.stance?.toLowerCase() ?? 'pro';
-      const log = {
-        id: raw.turn,
-        stage: 1,
-        side: stance,
-        speaker: getAgentLabel(raw.speakerId, stance, agentCount),
-        type: '입론',
-        turnNumber: raw.turn,
-        phase: raw.phase,
-        toolsUsed: [],
-        text: raw.content,
-      };
-      queueRef.current.push(log);
-      queueAwaitUserRef.current = true;
-      if (!isPlayingRef.current) {
-        playNextRef.current?.();
-      }
-    };
+    return () => ctrl.abort();
+  }, [debateParams, agentCount, resetState]);
 
-    es.onerror = () => {
-      setError('SSE 연결 오류');
-      closeEventSource();
-    };
-
-    return () => {
-      clearTimer();
-      closeEventSource();
-    };
-  }, [sessionId, resetState, closeEventSource, clearTimer]);
-
-  // ── 사용자 입론 제출 ─────────────────────────────────────────────────────────
+  // ── 사용자 입론 제출: POST /api/debates/{sessionId}/submit ──────────────────
   const submitOpening = useCallback(
     async (content) => {
-      // 사용자 입론 로그 생성 — Mock(STAGE1_ORDER) vs SSE(agentCount 기반) 분기
-      const userLog = sessionId
+      // 사용자 로그 즉시 표시
+      const userLog = debateParams
         ? {
             id: `user-opening-${Date.now()}`,
             stage: 1,
             side: userStance,
             speaker: '나',
             type: '입론',
-            turnNumber: agentCount === 1 ? 1 : agentCount === 3 ? 4 : 3, // 1:1→1, 3:3→4, 2:2→3
-            phase: 'opening',
-            toolsUsed: [],
             text: content,
             isUser: true,
           }
@@ -238,36 +259,60 @@ export function useDebateLogs(sessionId, agentCount = 2, userStance = 'pro') {
               speaker: userEntry?.label ?? '나',
               type: '입론',
               turnNumber: STAGE1_ORDER.findIndex((e) => e.isUser),
-              phase: 'opening',
-              toolsUsed: [],
               text: content,
               isUser: true,
             };
           })();
+
       setVisibleLogs((prev) => [...prev, userLog]);
       setAwaitingUserTurn(false);
       setOpeningComplete(true);
 
-      if (!sessionId) {
-        const postOpeningLogs = MOCK_SPEECH_LOGS.filter((log) => log.stage >= 2);
+      // Mock 모드: 이후 로그 재생
+      if (!debateParams) {
+        const postOpeningLogs = MOCK_SPEECH_LOGS.filter((l) => l.stage >= 2);
         timerRef.current = setTimeout(() => {
-          startQueue(postOpeningLogs, {
-            awaitUser: false,
-            onComplete: () => setDebateComplete(true),
-          });
+          startQueue(postOpeningLogs, { awaitUser: false, onComplete: () => setDebateComplete(true) });
         }, 700);
         return;
       }
 
-      if (sessionId) {
-        try {
-          await submitUserOpening({ sessionId, content });
-        } catch (e) {
-          setError(e?.message ?? '입론 제출 중 오류가 발생했습니다.');
+      // SSE 모드: POST /api/debates/{sessionId}/submit → SSE 응답 수신
+      if (!sessionId) { setError('세션 ID가 없습니다.'); return; }
+
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
+
+      try {
+        for await (const { type, data } of readSSE(
+          buildApiUrl(`/api/debates/${sessionId}/submit`),
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+            body: JSON.stringify({ content }),
+          },
+          ctrl.signal,
+        )) {
+          const raw = JSON.parse(data);
+
+          if (type === 'entry') {
+            const log = buildLogFromSSE(raw, agentCount);
+            queueRef.current.push(log);
+            if (!isPlayingRef.current) playNextRef.current?.();
+          } else if (type === 'waiting') {
+            if (raw.isFinished) {
+              setDebateComplete(true);
+            } else {
+              queueAwaitUserRef.current = true;
+              if (!isPlayingRef.current) setAwaitingUserTurn(true);
+            }
+          }
         }
+      } catch (e) {
+        if (e.name !== 'AbortError') setError(e?.message ?? '제출 중 오류가 발생했습니다.');
       }
     },
-    [sessionId, startQueue],
+    [debateParams, sessionId, userStance, agentCount, startQueue],
   );
 
   return {
@@ -276,9 +321,10 @@ export function useDebateLogs(sessionId, agentCount = 2, userStance = 'pro') {
     awaitingUserTurn,
     openingComplete,
     debateComplete,
-    openingSubmitted: openingComplete, // 하위 호환
-    loading: isTyping !== null,        // isTyping이 state라 reactive함
+    openingSubmitted: openingComplete,
+    loading: isTyping !== null,
     error,
+    sessionId,
     submitOpening,
   };
 }

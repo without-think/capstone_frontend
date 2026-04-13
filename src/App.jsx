@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { X, ChevronLeft } from 'lucide-react';
 import { TOPICS } from './data/topics';
 import { fetchTodayTopics } from './api/topicsApi';
-import { createSession } from './api/sessionsApi';
+import { STAGE3_MAX_CYCLES } from './pages/debate/mockData';
 import TopicGrid from './components/TopicGrid';
 import BackgroundBubbles from './components/BackgroundBubbles';
 import FixedStage from './components/FixedStage';
@@ -36,7 +36,7 @@ const App = () => {
   const [agentCount, setAgentCount] = useState(1);
   const [aiStances, setAiStances] = useState({ pro: [5, 3, 1], con: [5, 3, 1] });
   const [topics, setTopics] = useState(TOPICS); // 기본값: 하드코딩 데이터 (API 실패 시 fallback)
-  const [sessionId, setSessionId] = useState(null);
+  const [debateParams, setDebateParams] = useState(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
   const debateEnterTimeoutRef = useRef(null);
@@ -73,6 +73,7 @@ const App = () => {
     setUserStance(null);
     setAgentCount(1);
     setAiStances({ pro: [5, 3, 1], con: [5, 3, 1] });
+    setDebateParams(null);
     setTutorialOpen(false);
     setTutorialStep(0);
   };
@@ -115,14 +116,20 @@ const App = () => {
   };
 
   const handleEnter = () => {
-    createSession({
-      topic: selectedSubTopics[0],
-      userStance,
-      agentCount,
-      aiStances,
-    })
-      .then((res) => setSessionId(res.id ?? res.sessionId ?? null))
-      .catch(() => {}); // 실패 시 세션 없이 진행
+    // POST /api/debates 요청 바디 조립
+    // 상대 AI 강도: 사용자가 PRO면 CON AI들, CON이면 PRO AI들
+    const opponentSide = userStance === 'pro' ? 'con' : 'pro';
+    const agentIntensities = aiStances[opponentSide].slice(0, agentCount);
+    const topicId = selectedSubTopics[0]?.id ?? selectedSubTopics[0];
+
+    setDebateParams({
+      topic: topicId,
+      userStance: userStance?.toUpperCase() ?? 'PRO',
+      userIntensity: 3,
+      debateFormat: `${agentCount}:${agentCount}`,
+      agentIntensities,
+      maxCycle: STAGE3_MAX_CYCLES,
+    });
     setStage(2); // 참여설정 → 사전설문
   };
 
@@ -237,11 +244,9 @@ const App = () => {
 
       {isDebateRoute && (
         <DebatePage
-          activeData={activeData}
-          selectedSubTopics={selectedSubTopics}
+          debateParams={debateParams}
           userStance={userStance}
           agentCount={agentCount}
-          sessionId={sessionId}
           onBack={() => navigate('/topics')}
           onExit={() => navigate('/post-quiz')}
         />

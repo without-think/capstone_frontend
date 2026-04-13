@@ -18,14 +18,15 @@ import {
 } from './mockData';
 
 /**
- * @param {function} onBack - 뒤로가기 콜백
- * @param {function} onExit - 토론 종료 후 다음 단계 이동 콜백
- * @param {string|null} sessionId - 백엔드 세션 ID (  없으면 Mock 사용)
+ * @param {function} onBack       - 뒤로가기 콜백
+ * @param {function} onExit       - 토론 종료 후 다음 단계 이동 콜백
+ * @param {object|null} debateParams - POST /api/debates 요청 바디 (null이면 Mock 사용)
+ *   예: { topic, userStance, userIntensity, debateFormat, agentIntensities, maxCycle }
  */
 export default function DebatePage({
   onBack = () => console.log('back'),
   onExit = () => console.log('exit'),
-  sessionId = null,
+  debateParams = null,
   agentCount = 2,
   userStance = 'pro',
 }) {
@@ -39,7 +40,7 @@ export default function DebatePage({
   const [stage3Typing, setStage3Typing] = useState(null);
   const stage3ResponseIdx = useRef(0);
 
-  const { logs, loading, error, isTyping, awaitingUserTurn, submitOpening, openingSubmitted, openingComplete, debateComplete } = useDebateLogs(sessionId, agentCount, userStance);
+  const { logs, loading, error, isTyping, awaitingUserTurn, submitOpening, openingSubmitted, openingComplete, debateComplete } = useDebateLogs(debateParams, agentCount, userStance);
 
   useEffect(() => {
     if (openingComplete) {
