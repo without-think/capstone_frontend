@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { SendHorizonal, Mic, Plus, X } from 'lucide-react';
 import { MAX_ARGUMENT_TABS } from './mockData';
 
+
 export default function InputComposer({
   isMyTurn,
   isProSide,
@@ -11,13 +12,22 @@ export default function InputComposer({
   openingError,
   openingSubmitted,
   openingComplete,
+  onSubmitStage3,
+  stage3Opponent,
 }) {
   const [composerTab, setComposerTab] = useState('intro');
   const [composerIntro, setComposerIntro] = useState('');
   const [composerConclusion, setComposerConclusion] = useState('');
   const [composerArguments, setComposerArguments] = useState(['']);
-  const isOpeningStage = currentStage === 1;
 
+  // stage 3 전용 상태
+  const [stage3Answer, setStage3Answer] = useState('');
+  const [stage3Attack, setStage3Attack] = useState('');
+
+  const isOpeningStage = currentStage === 1;
+  const isFreeDebateStage = currentStage === 3;
+
+  // ── Stage 1 composer helpers ──────────────────────────────────────────────
   const composerTabs = [
     { id: 'intro', label: '자기소개/입장표명' },
     ...composerArguments.map((_, index) => ({ id: `argument-${index}`, label: `논거 ${index + 1}` })),
@@ -26,9 +36,7 @@ export default function InputComposer({
 
   const getPlaceholder = (tabId) => {
     const currentTab = composerTabs.find((tab) => tab.id === tabId);
-    const placeholderLabel = tabId === 'intro'
-      ? '자기소개와 입장 표명'
-      : currentTab?.label ?? '내용';
+    const placeholderLabel = tabId === 'intro' ? '자기소개와 입장 표명' : currentTab?.label ?? '내용';
     return `${placeholderLabel}에 대해 작성해주세요.`;
   };
 
@@ -75,7 +83,6 @@ export default function InputComposer({
     ]
       .map(([title, text]) => [title, (text ?? '').trim()])
       .filter(([, text]) => text.length > 0);
-
     return sections.map(([title, text]) => `## ${title}\n${text}`).join('\n\n');
   };
 
@@ -86,20 +93,31 @@ export default function InputComposer({
     setComposerTab('intro');
   };
 
-  const handleSend = async () => {
-    if (currentStage !== 1 || !onSubmitOpening || openingLoading || openingSubmitted) return;
-
+  // ── Stage 1 전송 ──────────────────────────────────────────────────────────
+  const handleSendOpening = async () => {
+    if (!onSubmitOpening || openingLoading || openingSubmitted) return;
     const content = buildOpeningContent();
     if (!content) return;
-
     try {
       await onSubmitOpening(content);
       clearComposer();
-    } catch {
-      // 실패 메시지는 상위 훅(error state)에서 노출
-    }
+    } catch { /* error state는 상위에서 관리 */ }
   };
 
+  // ── Stage 3 전송 ──────────────────────────────────────────────────────────
+  const handleSendStage3 = () => {
+    if (!onSubmitStage3) return;
+    const entries = [
+      stage3Answer.trim() && { type: '답변', content: stage3Answer.trim() },
+      stage3Attack.trim() && { type: '공격', content: stage3Attack.trim() },
+    ].filter(Boolean);
+    if (!entries.length) return;
+    onSubmitStage3(entries);
+    setStage3Answer('');
+    setStage3Attack('');
+  };
+
+  // ── 대기 중 화면 ──────────────────────────────────────────────────────────
   if (!isMyTurn) {
     return (
       <div className="flex items-center justify-center h-[56px] text-[13px] font-bold text-stone-400 gap-2">
@@ -113,6 +131,65 @@ export default function InputComposer({
     );
   }
 
+  // ── Stage 3: 자유 논박 동시 입력 UI ──────────────────────────────────────
+  if (isFreeDebateStage) {
+    return (
+      <div className="flex flex-col gap-2">
+        {/* 헤더 */}
+        <div className="flex items-center gap-1.5 px-4 pt-2 text-[12px] font-bold ${isProSide ? 'text-blue-700' : 'text-rose-700'}">
+          <Mic size={14} className={`animate-subtle-pulse ${isProSide ? 'text-blue-700' : 'text-rose-700'}`} />
+          <span className={isProSide ? 'text-blue-700' : 'text-rose-700'}>자유 논박 중</span>
+          {stage3Opponent && (
+            <span className="ml-1 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-bold text-stone-500">
+              vs {stage3Opponent.label}
+            </span>
+          )}
+        </div>
+
+        {/* 답변 + 공격 동시 입력 */}
+        <div className="flex items-start gap-2 pl-2 pr-1 pb-1">
+          <div className="flex-1 rounded-[22px] bg-white/75 shadow-inner divide-y divide-stone-100">
+            {/* 답변 입력 */}
+            <div>
+              <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+                <span className="inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold bg-stone-100 text-stone-600">답변</span>
+                <span className="text-[11px] font-medium text-stone-400">상대 주장에 직접 반박하거나 내 입장을 명확히 합니다.</span>
+              </div>
+              <textarea
+                value={stage3Answer}
+                onChange={(e) => setStage3Answer(e.target.value)}
+                placeholder="상대 주장에 대한 답변을 입력하세요."
+                className="w-full min-h-[64px] max-h-[100px] resize-none bg-transparent px-4 py-2 text-[14px] font-medium text-stone-800 placeholder:text-stone-400 focus:outline-none hide-scrollbar"
+              />
+            </div>
+            {/* 공격 입력 */}
+            <div>
+              <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+                <span className="inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold bg-stone-100 text-stone-600">공격</span>
+                <span className="text-[11px] font-medium text-stone-400">상대 논리의 허점을 지적해 입장 자체를 약화시킵니다.</span>
+              </div>
+              <textarea
+                value={stage3Attack}
+                onChange={(e) => setStage3Attack(e.target.value)}
+                placeholder="상대 입장의 허점을 공략하세요."
+                className="w-full min-h-[64px] max-h-[100px] resize-none bg-transparent px-4 py-2 text-[14px] font-medium text-stone-800 placeholder:text-stone-400 focus:outline-none hide-scrollbar"
+              />
+            </div>
+          </div>
+          <button
+            className={`mt-auto flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-full text-white transition-all shadow-md hover:scale-105 ${
+              isProSide ? 'bg-blue-500 hover:bg-blue-600' : 'bg-rose-500 hover:bg-rose-600'
+            }`}
+            onClick={handleSendStage3}
+          >
+            <SendHorizonal size={16} className="ml-0.5" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Stage 1 / 기타 단계 ───────────────────────────────────────────────────
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-start justify-between gap-3 px-4 pt-2">
@@ -203,9 +280,8 @@ export default function InputComposer({
               ? 'bg-stone-300 cursor-not-allowed'
               : isProSide ? 'bg-blue-500 hover:bg-blue-600' : 'bg-rose-500 hover:bg-rose-600'
           }`}
-          onClick={handleSend}
+          onClick={handleSendOpening}
           disabled={openingLoading || openingSubmitted || currentStage !== 1}
-          title={currentStage !== 1 ? '입론 단계에서만 제출할 수 있습니다.' : undefined}
         >
           <SendHorizonal size={16} className="ml-0.5" />
         </button>

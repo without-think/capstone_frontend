@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { TOPICS } from '../data/topics';
 
 const DESKTOP_LAYOUT = {
   tech:    { size: 280, left: 198, top: 60,  icon: 52, duration: '6.2s', delay: '-0.8s', floatY: '-10px', floatX: '7px' },
@@ -8,13 +7,12 @@ const DESKTOP_LAYOUT = {
   science: { size: 282, left: 720, top: 328, icon: 56, duration: '5.9s', delay: '-2.8s', floatY: '-9px', floatX: '-5px' },
 };
 
-const TopicGrid = ({ onTopicClick }) => {
+const TopicGrid = ({ topics, onTopicClick }) => {
   const [hoveredTopic, setHoveredTopic] = useState(null);
 
   return (
-    <div className="w-full">
-      <div className="relative h-[660px] max-w-[1200px] mx-auto">
-        {TOPICS.map((topic) => {
+    <div className="relative mx-auto h-[660px] w-full max-w-[1200px]">
+      {topics.map((topic) => {
           const Icon = topic.icon;
           const layout = DESKTOP_LAYOUT[topic.id];
           const isHovered = hoveredTopic === topic.id;
@@ -62,7 +60,6 @@ const TopicGrid = ({ onTopicClick }) => {
             </div>
           );
         })}
-      </div>
     </div>
   );
 };

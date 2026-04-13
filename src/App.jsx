@@ -8,6 +8,7 @@ import BackgroundBubbles from './components/BackgroundBubbles';
 import FixedStage from './components/FixedStage';
 import TopHeader from './components/TopHeader';
 import HomeLanding from './pages/HomeLanding';
+import OnboardingModal from './components/OnboardingModal';
 import SubTopicView from './pages/SubTopicView';
 import ParamsView from './pages/ParamsView';
 import PreSurvey from './pages/PreSurvey';
@@ -16,6 +17,7 @@ import FloatingActionBar from './components/FloatingActionBar';
 import DebatePage from './pages/debate/DebatePage';
 import PostQuiz from './pages/PostQuiz';
 import PostDebateStats from './pages/PostDebateStats';
+import DebateTutorialModal from './components/DebateTutorialModal';
 
 const App = () => {
   const getInitialRoute = () => {
@@ -26,6 +28,7 @@ const App = () => {
     return '/';
   };
   const [routePath, setRoutePath] = useState(getInitialRoute);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [activeTopic, setActiveTopic] = useState(null);
   const [selectedSubTopics, setSelectedSubTopics] = useState([]);
   const [stage, setStage] = useState(0); // 0: 세부주제, 1: 참여설정, 2: 사전설문, 3: 사전퀴즈, 4: 토론
@@ -34,6 +37,8 @@ const App = () => {
   const [aiStances, setAiStances] = useState({ pro: [5, 3, 1], con: [5, 3, 1] });
   const [topics, setTopics] = useState(TOPICS); // 기본값: 하드코딩 데이터 (API 실패 시 fallback)
   const [sessionId, setSessionId] = useState(null);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
   const debateEnterTimeoutRef = useRef(null);
 
   // 오늘의 주제 fetch
@@ -68,6 +73,8 @@ const App = () => {
     setUserStance(null);
     setAgentCount(1);
     setAiStances({ pro: [5, 3, 1], con: [5, 3, 1] });
+    setTutorialOpen(false);
+    setTutorialStep(0);
   };
 
   const handleTopicClick = (id) => {
@@ -80,6 +87,11 @@ const App = () => {
     setActiveTopic(null);
     setSelectedSubTopics([]);
     resetParams();
+  };
+
+  const handleEndDebate = () => {
+    handleClose();
+    navigate('/topics');
   };
 
   const toggleSubTopic = (sub) => {
@@ -134,9 +146,12 @@ const App = () => {
       window.history.pushState({}, '', path);
     }
     setRoutePath(path);
+    if (path === '/topics' && !localStorage.getItem('onboarding_done')) {
+      setShowOnboarding(true);
+    }
   };
 
-  const handleEnterDebate = () => {
+  const startDebate = () => {
     setStage(4);
     if (debateEnterTimeoutRef.current) {
       window.clearTimeout(debateEnterTimeoutRef.current);
@@ -145,6 +160,28 @@ const App = () => {
       debateEnterTimeoutRef.current = null;
       navigate('/debate');
     }, 420);
+  };
+
+  const handleEnterDebate = () => {
+    setTutorialStep(0);
+    setTutorialOpen(true);
+  };
+
+  const handleTutorialClose = () => {
+    setTutorialOpen(false);
+    startDebate();
+  };
+
+  const handleTutorialNext = () => {
+    if (tutorialStep >= 4) {
+      handleTutorialClose();
+      return;
+    }
+    setTutorialStep((prev) => prev + 1);
+  };
+
+  const handleTutorialPrev = () => {
+    setTutorialStep((prev) => Math.max(0, prev - 1));
   };
 
   return (
@@ -168,6 +205,10 @@ const App = () => {
         <HomeLanding onCreateDebate={() => navigate('/topics')} />
       )}
 
+      {showOnboarding && (
+        <OnboardingModal onClose={() => setShowOnboarding(false)} />
+      )}
+
       {/* [1] 메인 화면 */}
       <div className={`absolute inset-0 px-4 transition-all duration-700 z-10 overflow-auto
         ${isTopicSelectionRoute && !activeTopic ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}
@@ -177,7 +218,7 @@ const App = () => {
             <div className="relative h-[900px] w-[1440px]">
               <TopHeader />
 
-              <div className="pt-[96px] text-center">
+              <div className="mx-auto flex w-full max-w-[1200px] flex-col items-center pt-[96px] text-center">
                 <h1 className="text-[48px] font-extrabold leading-[55px] tracking-[-0.03em] text-[#38332E]">
                   어떤 주제에 대해 토론할까요?
                 </h1>
@@ -187,7 +228,7 @@ const App = () => {
               </div>
 
               <div className="mt-6 w-full xl:-mt-1">
-                <TopicGrid onTopicClick={handleTopicClick} />
+                <TopicGrid topics={topics} onTopicClick={handleTopicClick} />
               </div>
             </div>
           </FixedStage>
@@ -199,8 +240,10 @@ const App = () => {
           activeData={activeData}
           selectedSubTopics={selectedSubTopics}
           userStance={userStance}
+          agentCount={agentCount}
           sessionId={sessionId}
           onBack={() => navigate('/topics')}
+          onExit={() => navigate('/post-quiz')}
         />
       )}
 
@@ -214,7 +257,7 @@ const App = () => {
       )}
 
       {isStatsRoute && (
-        <PostDebateStats onBack={() => navigate('/debate')} />
+        <PostDebateStats onBack={handleEndDebate} />
       )}
 
       {/* [3] 풀스크린 오버레이 */}
@@ -293,6 +336,16 @@ const App = () => {
         userStance={userStance}
         onEnter={handleEnter}
       />}
+
+      <DebateTutorialModal
+        open={tutorialOpen}
+        stepIndex={tutorialStep}
+        agentCount={agentCount}
+        userStance={userStance}
+        onPrev={handleTutorialPrev}
+        onNext={handleTutorialNext}
+        onClose={handleTutorialClose}
+      />
     </div>
   );
 };

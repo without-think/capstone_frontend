@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 import BackgroundBubbles from '../components/BackgroundBubbles';
 
 // ─── Mock 데이터 ────────────────────────────────────────────────────────────
@@ -122,7 +122,7 @@ function PentagonRadar({ before, after, size = 300 }) {
             y={lp.y.toFixed(1)}
             textAnchor={anchor}
             dominantBaseline="middle"
-            fontSize={11.5}
+            fontSize={14}
             fontWeight="700"
             fill="#57534E"
             fontFamily="sans-serif"
@@ -144,9 +144,9 @@ function RadarCard({ before, after }) {
   }, METRICS[0].key);
 
   return (
-    <div className="mb-5 rounded-[36px] border border-white/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(245,245,244,0.94))] px-7 py-7 shadow-[0_24px_60px_rgba(0,0,0,0.10)]">
-      <div className="mb-5 flex items-center justify-end">
-        <div className="flex items-center gap-5 text-xs font-semibold text-stone-500">
+    <div className="mb-5 rounded-[36px] border border-white/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(245,245,244,0.94))] px-7 py-2 shadow-[0_24px_60px_rgba(0,0,0,0.10)]">
+      <div className="mb-1 flex items-center justify-end">
+        <div className="flex items-center gap-5 text-base font-bold text-stone-700">
           <span className="flex items-center gap-2">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-slate-400" />
             사전
@@ -158,21 +158,29 @@ function RadarCard({ before, after }) {
         </div>
       </div>
 
-      <div className="flex justify-center py-4">
-        <PentagonRadar before={before} after={after} size={320} />
+      <div className="flex justify-center py-0">
+        <PentagonRadar before={before} after={after} size={420} />
       </div>
 
-      {/* 지표 도움말 */}
-      <div className="mt-2 border-t border-stone-100 pt-5 space-y-2.5">
+      <div className="mt-0 border-t border-stone-100 pt-2 space-y-3">
         {METRICS.map((m) => {
           const isBest = m.key === bestKey && ((after[m.key] ?? 0) - (before[m.key] ?? 0)) > 0;
           return (
-            <div key={m.key} className={`flex items-start justify-between gap-4 rounded-[14px] px-3 py-2.5 -mx-3 transition-colors ${isBest ? 'bg-emerald-500' : ''}`}>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className={`text-[13px] font-bold ${isBest ? 'text-white' : 'text-stone-700'}`}>{m.label}</span>
-                {isBest && <span className="text-[11px] font-bold text-emerald-100">가장 많이 성장</span>}
+            <div key={m.key} className={`flex items-center justify-between rounded-[14px] px-4 py-4 -mx-3 ${isBest ? 'bg-emerald-500' : 'bg-stone-50'}`}>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`text-[17px] ${isBest ? 'text-white' : 'text-stone-700'}`}>
+                    <span className="font-extrabold">{m.label}</span>
+                    <span className={`font-medium ${isBest ? 'text-emerald-100' : 'text-stone-500'}`}> : {m.desc}</span>
+                  </span>
+                  {isBest && <span className="text-[12px] font-bold text-emerald-100">가장 많이 성장</span>}
+                </div>
               </div>
-              <span className={`text-[12px] font-medium leading-relaxed text-right ${isBest ? 'text-emerald-100' : 'text-stone-400'}`}>{m.desc}</span>
+              <div className="flex items-center gap-2 shrink-0 ml-4">
+                <span className={`text-[16px] font-extrabold ${isBest ? 'text-emerald-100' : 'text-stone-500'}`}>{before[m.key]}</span>
+                <span className={`text-[15px] font-extrabold ${isBest ? 'text-white/60' : 'text-stone-400'}`}>→</span>
+                <span className={`text-[22px] font-black ${isBest ? 'text-white' : 'text-indigo-500'}`}>{after[m.key]}</span>
+              </div>
             </div>
           );
         })}
@@ -183,17 +191,17 @@ function RadarCard({ before, after }) {
 
 // ─── 원형 게이지 ─────────────────────────────────────────────────────────────
 function SingleGauge({ score, label, isGray = false }) {
-  const size = 200;
+  const size = 260;
   const cx = size / 2;
   const cy = size / 2;
-  const r = 74;
-  const sw = 12;
+  const r = 98;
+  const sw = 14;
   const circumference = 2 * Math.PI * r;
   const offset = circumference - (score / 100) * circumference;
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <p className="text-[11px] font-bold tracking-[0.14em] text-stone-400">{label}</p>
+      <p className="text-[18px] font-extrabold tracking-[0.14em] text-stone-700">{label}</p>
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
           {/* 배경 트랙 */}
@@ -211,11 +219,10 @@ function SingleGauge({ score, label, isGray = false }) {
         </svg>
 
         {/* 중앙 텍스트 */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
-          <p className="text-[44px] font-black leading-none tracking-tight text-stone-800">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <p className="text-[52px] font-black leading-none tracking-tight text-stone-800">
             {score}
           </p>
-          <p className="text-[13px] font-semibold text-stone-400">/ 100pt</p>
         </div>
       </div>
     </div>
@@ -232,11 +239,6 @@ export default function PostDebateStats({ onBack = () => {} }) {
   const scoreBefore = totalOf(before);
   const scoreAfter  = totalOf(after);
   const totalDelta  = scoreAfter - scoreBefore;
-
-  const bestMetric = METRICS.reduce((best, m) => {
-    const delta = (after[m.key] ?? 0) - (before[m.key] ?? 0);
-    return delta > (best.delta ?? -Infinity) ? { ...m, delta } : best;
-  }, {});
 
   const verdict =
     totalDelta >= 20 ? '논증 역량이 크게 성장했어요.' :
@@ -273,24 +275,25 @@ export default function PostDebateStats({ onBack = () => {} }) {
 
         {/* 헤더 */}
         <div className="mb-8 text-center">
-          <span className="mb-4 inline-block rounded-full bg-stone-100/90 px-4 py-1 text-sm font-semibold text-stone-500">
+          <span className="mb-4 inline-block rounded-full bg-stone-800 px-5 py-1.5 text-base font-extrabold text-white">
             토론 결과
           </span>
-          <h2 className="text-[36px] font-extrabold tracking-tight text-stone-800 md:text-[44px]">
+          <h2 className="text-[40px] font-black tracking-tight text-stone-800 md:text-[52px]">
             토론 전후 리포트
           </h2>
         </div>
 
         {/* 종합 점수 카드 */}
         <div className="mb-5 rounded-[36px] border border-white/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(245,245,244,0.94))] px-7 py-8 shadow-[0_24px_60px_rgba(0,0,0,0.10)]">
-          <p className="mb-1 text-center text-[18px] font-extrabold tracking-tight text-stone-900">종합 점수</p>
-          <p className="mb-6 text-center text-[14px] font-medium text-stone-400">{verdict}</p>
+          <p className="mb-1 text-center text-[22px] font-extrabold tracking-tight text-stone-900">종합 점수</p>
+          <p className="mb-6 text-center text-[18px] font-bold text-stone-700">{verdict}</p>
           <div className="flex items-center justify-around gap-6">
             <SingleGauge score={scoreBefore} label="사전" isGray />
-            <div className="flex flex-col items-center gap-1">
-              <span className={`text-lg font-black ${totalDelta > 0 ? 'text-emerald-500' : totalDelta < 0 ? 'text-rose-400' : 'text-stone-400'}`}>
-                {totalDelta > 0 ? `+${totalDelta}` : totalDelta === 0 ? '±0' : totalDelta}
-              </span>
+            <div className="flex flex-col items-center gap-2">
+              <div className={`flex items-center ${totalDelta > 0 ? 'text-emerald-500' : totalDelta < 0 ? 'text-rose-400' : 'text-stone-400'}`}>
+                <ChevronRight size={52} strokeWidth={3} />
+                <ChevronRight size={52} strokeWidth={3} className="-ml-8" />
+              </div>
             </div>
             <SingleGauge score={scoreAfter} label="사후" />
           </div>

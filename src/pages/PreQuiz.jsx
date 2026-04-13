@@ -177,13 +177,13 @@ const PreQuiz = ({ visible, activeData, selectedSubTopics = [], onComplete }) =>
     >
       <div className="mx-auto flex min-h-full w-full max-w-7xl flex-col px-4 pb-20 pt-4 sm:px-6 lg:px-8">
         <div className="mb-5 text-center">
-          <span className="mb-2 inline-block rounded-full bg-stone-100/90 px-4 py-1 text-sm font-semibold text-stone-500">
+          <span className="mb-2 inline-block rounded-full bg-stone-800 px-5 py-1.5 text-base font-extrabold text-white">
             {topicLabel}
           </span>
           <h2 className="text-[30px] font-extrabold tracking-tight text-stone-800 sm:text-[34px] lg:text-[38px]">
             사전 근거 작성
           </h2>
-          <p className="mx-auto mt-3 max-w-4xl text-[14px] font-medium leading-relaxed text-stone-500 sm:text-[15px] lg:text-[16px]">
+          <p className="mx-auto mt-3 max-w-4xl text-[17px] font-bold leading-relaxed text-stone-700 sm:text-[18px]">
             대략적인 검색이나 사전조사 없이, 지금 알고 있는 내용만으로 근거를 작성해주세요. 각 칸에는 현재 알고 있는 논거만 적고, 없으면 비워두셔도 됩니다.
           </p>
         </div>

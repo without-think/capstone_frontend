@@ -1,4 +1,4 @@
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, ChevronRight } from 'lucide-react';
 import { getSurveyLink } from '../config/surveyLinks';
 
 const PreSurvey = ({ visible, topicId, activeData, selectedSubTopics = [], onComplete }) => {
@@ -8,8 +8,7 @@ const PreSurvey = ({ visible, topicId, activeData, selectedSubTopics = [], onCom
   const topicLabel = selectedSubTopic?.title ?? selectedSubTopics[0] ?? activeData?.title ?? '주제 미선택';
 
   const handleOpenForm = () => {
-    if (!hasSurveyUrl) return;
-    window.open(surveyUrl, '_blank', 'noopener,noreferrer');
+    window.open('about:blank', '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -19,33 +18,29 @@ const PreSurvey = ({ visible, topicId, activeData, selectedSubTopics = [], onCom
     >
       <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col justify-center px-6 pb-16 pt-4">
         <div className="mb-8 text-center">
-          <span className="inline-block px-4 py-1 rounded-full bg-stone-100 text-stone-500 text-sm font-semibold mb-4">
+          <span className="inline-block px-5 py-1.5 rounded-full bg-stone-800 text-white text-base font-extrabold mb-4">
             {topicLabel}
           </span>
           <h2 className="text-4xl md:text-5xl font-extrabold text-stone-800 tracking-tight">
             사전 설문
           </h2>
-          <p className="mt-4 text-[15px] font-medium leading-7 text-stone-500 md:text-[16px]">
+          <p className="mt-4 text-[17px] font-bold leading-7 text-stone-700 md:text-[18px]">
             하단 설명을 참고하여 진행해 주세요.
           </p>
         </div>
 
         <div className="mx-auto w-full max-w-3xl rounded-[40px] border border-white/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(245,245,244,0.94))] px-7 py-8 shadow-[0_24px_60px_rgba(0,0,0,0.12)] md:px-10 md:py-10">
-          <div className="mt-4 grid gap-3 text-sm text-stone-700 md:grid-cols-3">
-            <div className="rounded-[24px] border border-stone-200 bg-white px-4 py-4">
-              <p className="text-[11px] font-bold tracking-[0.12em] text-stone-400">STEP 01</p>
-              <p className="mt-3 font-bold text-stone-900">1. 설문 열기</p>
-              <p className="mt-1 leading-6 text-stone-500">하단 버튼을 눌러 사전 설문을 시작합니다.</p>
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <div className="w-44 h-44 rounded-full border border-stone-200 bg-white shadow-sm flex items-center justify-center text-center px-4">
+              <p className="font-extrabold text-stone-900 text-xl">설문 열기</p>
             </div>
-            <div className="rounded-[24px] border border-stone-200 bg-white px-4 py-4">
-              <p className="text-[11px] font-bold tracking-[0.12em] text-stone-400">STEP 02</p>
-              <p className="mt-3 font-bold text-stone-900">2. 응답 제출</p>
-              <p className="mt-1 leading-6 text-stone-500">구글폼에서 답변을 완료하고 제출합니다.</p>
+            <ChevronRight size={28} className="shrink-0 text-stone-400" strokeWidth={2.5} />
+            <div className="w-44 h-44 rounded-full border border-stone-200 bg-white shadow-sm flex items-center justify-center text-center px-4">
+              <p className="font-extrabold text-stone-900 text-xl">응답 제출</p>
             </div>
-            <div className="rounded-[24px] border border-stone-200 bg-white px-4 py-4">
-              <p className="text-[11px] font-bold tracking-[0.12em] text-stone-400">STEP 03</p>
-              <p className="mt-3 font-bold text-stone-900">3. 다시 돌아오기</p>
-              <p className="mt-1 leading-6 text-stone-500">현재 화면으로 돌아와 다음으로 이동합니다.</p>
+            <ChevronRight size={28} className="shrink-0 text-stone-400" strokeWidth={2.5} />
+            <div className="w-44 h-44 rounded-full border border-stone-200 bg-white shadow-sm flex items-center justify-center text-center px-4">
+              <p className="font-extrabold text-stone-900 text-xl">돌아오기</p>
             </div>
           </div>
 

@@ -80,6 +80,15 @@ export default function SpeechBubble({ log }) {
           <div className={`relative px-4 py-3 text-[15px] leading-relaxed shadow-[0_8px_20px_rgba(0,0,0,0.03)] ${bubbleTone}`}>
             {/* 상단 배지 행: 유형 + 논증 구조 */}
             <div className="flex items-center gap-2 mb-2 flex-wrap">
+              {!isMine && log.side && (
+                <span className={`text-[12px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${
+                  log.side === 'pro'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-rose-100 text-rose-700'
+                }`}>
+                  {log.side === 'pro' ? '찬성' : '반대'}
+                </span>
+              )}
               <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full shrink-0 ${typeBadgeTone}`}>
                 {log.type}
               </span>

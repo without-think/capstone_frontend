@@ -2,16 +2,63 @@ import { useEffect, useRef } from 'react';
 import SpeechBubble from './SpeechBubble';
 import InputComposer from './InputComposer';
 
+// 타이핑 인디케이터 — 다음 발화자가 준비 중임을 보여준다
+function TypingIndicator({ speaker }) {
+  const normalized = speaker ?? 'AI';
+  // agent ID(mock) 또는 "반대 1" 같은 라벨(SSE) 모두 처리
+  const compressLabel = (s) => {
+    const compressed = s.replace('찬성', '찬').replace('반대', '반').replace(/\s+/g, '');
+    const m = compressed.match(/^(찬|반)(\d+)/);
+    return m ? `${m[1]}${m[2]}` : compressed.slice(0, 3);
+  };
+  const shortLabel = normalized === '사용자' || normalized === '나'
+    ? '나'
+    : normalized === 'agent_3' ? '찬1'
+    : normalized === 'agent_2' ? '반2'
+    : normalized === 'agent_1' ? '반1'
+    : compressLabel(normalized);
+  const isPro = normalized.includes('찬') || normalized === 'agent_3';
+  const tone = isPro
+    ? 'bg-blue-100 text-blue-700 border border-blue-200'
+    : 'bg-rose-100 text-rose-700 border border-rose-200';
+  // agent ID → 표시명 변환 (mock 모드 대응); SSE 모드는 이미 "반대 1" 같은 라벨이 온다
+  const displayName = normalized === '사용자' || normalized === '나' ? '사용자'
+    : normalized === 'agent_3' ? '찬성 1'
+    : normalized === 'agent_2' ? '반대 2'
+    : normalized === 'agent_1' ? '반대 1'
+    : normalized;
+  const label = `${displayName} 입력 중입니다.`;
+
+  return (
+    <div className="flex items-end gap-2">
+      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${tone}`}>
+        {shortLabel}
+      </div>
+      <div className="flex items-center gap-2 rounded-[18px] rounded-bl-sm border border-stone-100 bg-white/90 px-4 py-3 shadow-sm">
+        <span className="text-[12px] font-semibold text-stone-400">{label}</span>
+        <span className="flex gap-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-stone-300 animate-bounce" style={{ animationDelay: '0ms' }} />
+          <span className="h-1.5 w-1.5 rounded-full bg-stone-300 animate-bounce" style={{ animationDelay: '150ms' }} />
+          <span className="h-1.5 w-1.5 rounded-full bg-stone-300 animate-bounce" style={{ animationDelay: '300ms' }} />
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function ChatPanel({
   logs,
   currentStage,
   isMyTurn,
   isProSide,
+  isTyping,
   onSubmitOpening,
   openingLoading,
   openingError,
   openingSubmitted,
   openingComplete,
+  onSubmitStage3,
+  stage3Opponent,
 }) {
   const scrollRef = useRef(null);
   const hasStage1Moderator = logs.some((log) => log.stage === 1 && log.moderator);
@@ -26,7 +73,7 @@ export default function ChatPanel({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [logs, currentStage]);
+  }, [logs, currentStage, isTyping]);
 
   return (
     <section className="rounded-[32px] border border-white/80 bg-white/60 backdrop-blur-md shadow-[0_12px_32px_rgba(0,0,0,0.04)] flex flex-col h-full overflow-hidden">
@@ -43,6 +90,8 @@ export default function ChatPanel({
           .map((log) => (
             <SpeechBubble key={log.id} log={log} />
           ))}
+        {/* 타이핑 인디케이터 */}
+        {isTyping && <TypingIndicator speaker={isTyping} />}
       </div>
 
       {/* 입력 영역 */}
@@ -64,6 +113,8 @@ export default function ChatPanel({
               openingError={openingError}
               openingSubmitted={openingSubmitted}
               openingComplete={openingComplete}
+              onSubmitStage3={onSubmitStage3}
+              stage3Opponent={stage3Opponent}
             />
           </div>
         </div>

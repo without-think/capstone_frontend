@@ -1,30 +1,47 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
-const getStageScale = (baseWidth, baseHeight) => {
-  if (typeof window === 'undefined') return 1;
-
-  const widthScale = window.innerWidth / baseWidth;
-  const heightScale = (window.innerHeight - 8) / baseHeight;
+const getStageScale = (baseWidth, baseHeight, availableWidth, availableHeight) => {
+  const widthScale = availableWidth / baseWidth;
+  const heightScale = availableHeight / baseHeight;
 
   return Math.min(widthScale, heightScale, 1);
 };
 
 const FixedStage = ({ baseWidth, baseHeight, children, className = '' }) => {
-  const [scale, setScale] = useState(() => getStageScale(baseWidth, baseHeight));
+  const containerRef = useRef(null);
+  const [scale, setScale] = useState(1);
 
   useEffect(() => {
+    if (!containerRef.current || typeof window === 'undefined') return undefined;
+
     const updateScale = () => {
-      setScale(getStageScale(baseWidth, baseHeight));
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      setScale(
+        getStageScale(
+          baseWidth,
+          baseHeight,
+          rect.width,
+          Math.max(window.innerHeight - 8, 0),
+        ),
+      );
     };
 
     updateScale();
+
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(containerRef.current);
     window.addEventListener('resize', updateScale);
 
-    return () => window.removeEventListener('resize', updateScale);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateScale);
+    };
   }, [baseWidth, baseHeight]);
 
   return (
-    <div className={`flex w-full justify-center ${className}`}>
+    <div ref={containerRef} className={`flex w-full justify-center ${className}`}>
       <div
         className="relative"
         style={{
@@ -40,7 +57,7 @@ const FixedStage = ({ baseWidth, baseHeight, children, className = '' }) => {
             width: baseWidth,
             height: baseHeight,
             transform: `scale(${scale})`,
-            transformOrigin: 'top center',
+            transformOrigin: 'top left',
           }}
         >
           {children}
