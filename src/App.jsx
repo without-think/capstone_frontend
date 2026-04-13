@@ -118,8 +118,12 @@ const App = () => {
   const handleEnter = () => {
     // POST /api/debates 요청 바디 조립
     // 상대 AI 강도: 사용자가 PRO면 CON AI들, CON이면 PRO AI들
+    const sameSide = userStance === 'pro' ? 'pro' : 'con';
     const opponentSide = userStance === 'pro' ? 'con' : 'pro';
-    const agentIntensities = aiStances[opponentSide].slice(0, agentCount);
+    const agentIntensities = [
+      ...aiStances[sameSide].slice(0, agentCount - 1),
+      ...aiStances[opponentSide].slice(0, agentCount),
+    ];
     const topicId = selectedSubTopics[0]?.id ?? selectedSubTopics[0];
 
     setDebateParams({
@@ -128,7 +132,6 @@ const App = () => {
       userIntensity: 3,
       debateFormat: `${agentCount}:${agentCount}`,
       agentIntensities,
-      maxCycle: STAGE3_MAX_CYCLES,
     });
     setStage(2); // 참여설정 → 사전설문
   };

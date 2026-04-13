@@ -58,13 +58,25 @@ function getAgentLabel(speakerId, stance, agentCount) {
   return `찬성 ${num - agentCount}`;
 }
 
+// phase 문자열 → UI 단계 번호 (백엔드 DebateEventResponse에 stage 필드 없음)
+function phaseToStage(phase) {
+  if (!phase) return 1;
+  if (phase === 'opening') return 1;
+  if (phase === 'chained_rebuttal') return 2;
+  if (phase === 'free_debate') return 3;
+  if (phase === 'role_reversal') return 4;
+  if (phase === 'synthesis' || phase === 'closing') return 5;
+  return 1; // 알 수 없는 phase는 1단계로 fallback
+}
+
 function buildLogFromSSE(raw, agentCount) {
   const stance = raw.stance?.toLowerCase() ?? 'pro';
+  const speakerId = raw.speakerId || raw.speaker_id;
   return {
     id: raw.turn ?? `entry-${Date.now()}`,
-    stage: raw.stage ?? 1,
+    stage: phaseToStage(raw.phase),
     side: stance,
-    speaker: getAgentLabel(raw.speakerId, stance, agentCount),
+    speaker: getAgentLabel(speakerId, stance, agentCount),
     type: raw.type ?? '입론',
     turnNumber: raw.turn,
     text: raw.content,
@@ -170,6 +182,7 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro') 
 
   // ── Mock 모드 ────────────────────────────────────────────────────────────────
   useEffect(() => {
+    console.log('[useDebateLogs] debateParams:', debateParams);
     if (debateParams) return;
 
     resetState();
@@ -279,6 +292,7 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro') 
 
       // SSE 모드: POST /api/debates/{sessionId}/submit → SSE 응답 수신
       if (!sessionId) { setError('세션 ID가 없습니다.'); return; }
+      console.log('[submitOpening] sessionId:', sessionId);
 
       const ctrl = new AbortController();
       abortRef.current = ctrl;
@@ -296,7 +310,11 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro') 
           const raw = JSON.parse(data);
 
           if (type === 'entry') {
+            // 사용자 자신의 entry는 이미 수동으로 추가했으므로 스킵
+            const speakerId = raw.speakerId || raw.speaker_id;
+            if (speakerId === 'user' || speakerId === '사용자') continue;
             const log = buildLogFromSSE(raw, agentCount);
+            console.log('[submitOpening] entry received:', log.speaker, log.text?.slice(0, 30));
             queueRef.current.push(log);
             if (!isPlayingRef.current) playNextRef.current?.();
           } else if (type === 'waiting') {
@@ -309,6 +327,7 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro') 
           }
         }
       } catch (e) {
+        console.error('[submitOpening] SSE error:', e);
         if (e.name !== 'AbortError') setError(e?.message ?? '제출 중 오류가 발생했습니다.');
       }
     },

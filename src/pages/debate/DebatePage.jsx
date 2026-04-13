@@ -150,6 +150,9 @@ export default function DebatePage({
   const mergedLogs = [...logs, ...stage3Messages];
   const showStage3Modal = currentStage === 3 && !stage3Opponent;
 
+  // 백엔드가 user_opening을 기다리는 초기 상태: 빈 채팅 + 사용자 차례
+  const isWaitingForUserOpening = currentStage === 1 && awaitingUserTurn && logs.length === 0;
+
   return (
     <div className="h-screen overflow-hidden bg-[linear-gradient(135deg,#F5F5F4,#E7E5E4)] text-stone-800 font-sans selection:bg-stone-200 selection:text-stone-900">
       <style>{`
@@ -181,6 +184,18 @@ export default function DebatePage({
 
           {/* 왼쪽: 채팅 패널 */}
           <div className="flex flex-col h-full min-h-0">
+            {/* SSE 오류 배너 */}
+            {error && (
+              <div className="mb-2 rounded-2xl bg-red-50 border border-red-200 px-4 py-2.5 text-[13px] font-semibold text-red-600">
+                연결 오류: {error}
+              </div>
+            )}
+            {/* 사용자 입론 안내 배너 */}
+            {isWaitingForUserOpening && (
+              <div className="mb-2 rounded-2xl bg-blue-50 border border-blue-200 px-4 py-2.5 text-[13px] font-semibold text-blue-700">
+                AI 에이전트들이 준비됐습니다. 아래 입력창에 먼저 입론을 작성하고 전송하면 토론이 시작됩니다.
+              </div>
+            )}
             <ChatPanel
               logs={mergedLogs}
               currentStage={currentStage}

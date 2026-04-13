@@ -7,12 +7,15 @@ const buildTopicsWithApiData = (categories) => {
     if (!apiSubTopics) return topic;
     return {
       ...topic,
-      subTopics: apiSubTopics.map(({ title, description, pro, con, sources }) => ({
-        title,
-        description,
-        pro,
-        con,
-        sources,
+      subTopics: apiSubTopics.map((sub) => ({
+        id: sub.id,
+        title: sub.title,
+        description: sub.descriptionShort ?? sub.description ?? '',
+        description_short: sub.descriptionShort ?? sub.description ?? '',
+        description_long: sub.descriptionLong ?? '',
+        pro: sub.pro,
+        con: sub.con,
+        references: sub.references ?? [],
       })),
     };
   });
