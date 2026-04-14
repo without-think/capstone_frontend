@@ -3,8 +3,9 @@ import SpeechBubble from './SpeechBubble';
 import InputComposer from './InputComposer';
 
 // 타이핑 인디케이터 — 다음 발화자가 준비 중임을 보여준다
-function TypingIndicator({ speaker }) {
+function TypingIndicator({ speaker, currentStage }) {
   const normalized = speaker ?? 'AI';
+  const isRoleReversal = currentStage === 4;
   // agent ID(mock) 또는 "반대 1" 같은 라벨(SSE) 모두 처리
   const compressLabel = (s) => {
     const compressed = s.replace('찬성', '찬').replace('반대', '반').replace(/\s+/g, '');
@@ -18,7 +19,8 @@ function TypingIndicator({ speaker }) {
     : normalized === 'agent_1' ? '반1'
     : compressLabel(normalized);
   const isPro = normalized.includes('찬') || normalized === 'agent_3';
-  const tone = isPro
+  const displayIsPro = isRoleReversal ? !isPro : isPro;
+  const tone = displayIsPro
     ? 'bg-blue-100 text-blue-700 border border-blue-200'
     : 'bg-rose-100 text-rose-700 border border-rose-200';
   // agent ID → 표시명 변환 (mock 모드 대응); SSE 모드는 이미 "반대 1" 같은 라벨이 온다
@@ -36,6 +38,11 @@ function TypingIndicator({ speaker }) {
       </div>
       <div className="flex items-center gap-2 rounded-[18px] rounded-bl-sm border border-stone-100 bg-white/90 px-4 py-3 shadow-sm">
         <span className="text-[12px] font-semibold text-stone-400">{label}</span>
+        {isRoleReversal && (
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold text-amber-700">
+            역할반전 중
+          </span>
+        )}
         <span className="flex gap-1">
           <span className="h-1.5 w-1.5 rounded-full bg-stone-300 animate-bounce" style={{ animationDelay: '0ms' }} />
           <span className="h-1.5 w-1.5 rounded-full bg-stone-300 animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -52,6 +59,7 @@ export default function ChatPanel({
   isFinalize,
   isMyTurn,
   isProSide,
+  stage3CanAttack = true,
   isTyping,
   onSubmitOpening,
   openingLoading,
@@ -62,6 +70,7 @@ export default function ChatPanel({
   stage3Opponent,
 }) {
   const scrollRef = useRef(null);
+  const isRoleReversal = currentStage === 4;
   const hasStage1Moderator = logs.some((log) => log.stage === 1 && log.moderator);
   const openingModeratorGuide = {
     id: 'opening-moderator-guide',
@@ -83,8 +92,14 @@ export default function ChatPanel({
         ref={scrollRef}
         className="hide-scrollbar flex-1 overflow-y-auto p-4 space-y-4"
       >
+        {isRoleReversal && (
+          <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-center">
+            <p className="text-[12px] font-extrabold text-amber-800">역할반전 진행 중</p>
+            <p className="mt-1 text-[12px] font-medium text-amber-700">사용자와 상대 진영 색상이 반대로 표시됩니다.</p>
+          </div>
+        )}
         {!hasStage1Moderator && (
-          <SpeechBubble log={openingModeratorGuide} />
+          <SpeechBubble log={openingModeratorGuide} currentStage={currentStage} />
         )}
         {(() => {
           const seenStages = new Set();
@@ -93,13 +108,13 @@ export default function ChatPanel({
             if (isFirstOfStage) seenStages.add(log.stage);
             return (
               <div key={log.id} id={isFirstOfStage ? `stage-anchor-${log.stage}` : undefined}>
-                <SpeechBubble log={log} />
+                <SpeechBubble log={log} currentStage={currentStage} />
               </div>
             );
           });
         })()}
         {/* 타이핑 인디케이터 */}
-        {isTyping && <TypingIndicator speaker={isTyping} />}
+        {isTyping && <TypingIndicator speaker={isTyping} currentStage={currentStage} />}
       </div>
 
       {/* 입력 영역 */}
@@ -117,6 +132,7 @@ export default function ChatPanel({
               isProSide={isProSide}
               isFinalize={isFinalize}
               currentStage={currentStage}
+              stage3CanAttack={stage3CanAttack}
               onSubmitOpening={onSubmitOpening}
               openingLoading={openingLoading}
               openingError={openingError}

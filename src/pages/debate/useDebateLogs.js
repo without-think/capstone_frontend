@@ -158,6 +158,7 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
   const [sessionId, setSessionId] = useState(null);
   const [waitingFor, setWaitingFor] = useState(null);
   const [synthesisDraft, setSynthesisDraft] = useState(null);
+  const [freeRebuttalUserTurnCount, setFreeRebuttalUserTurnCount] = useState(0);
   const sessionIdRef = useRef(null);
 
   const queueRef = useRef([]);
@@ -170,6 +171,7 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
   const resolveLabelRef = useRef(makeAgentLabelResolver());
   const submitTurnRef = useRef(null); // 재귀 자동제출용 ref
   const firstEntryReceivedRef = useRef(false); // 첫 번째 entry 여부 (입론 첫 에이전트 딜레이 스킵용)
+  const freeRebuttalUserTurnCountRef = useRef(0);
 
   // ── 타이머 정리 ─────────────────────────────────────────────────────────────
   const clearTimer = useCallback(() => {
@@ -234,9 +236,11 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
     setSessionId(null);
     setWaitingFor(null);
     setSynthesisDraft(null);
+    setFreeRebuttalUserTurnCount(0);
     sessionIdRef.current = null;
     stage3CycleRef.current = 0;
     firstEntryReceivedRef.current = false;
+    freeRebuttalUserTurnCountRef.current = 0;
     resolveLabelRef.current = makeAgentLabelResolver();
     clearDebateSession();
   }, [clearTimer]);
@@ -306,15 +310,36 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
-    // preparedSessionId 가 있으면 버퍼 replay 스트림 사용, 없으면 직접 init
-    const sseUrl = preparedSessionId
-      ? buildApiUrl(`/api/debates/${preparedSessionId}/stream`)
-      : buildApiUrl('/api/debates');
-    const sseOptions = preparedSessionId
-      ? { method: 'GET', headers: { Accept: 'text/event-stream' } }
-      : { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' }, body: JSON.stringify(debateParams) };
-
     (async () => {
+      // preparedSessionId: prop → sessionStorage → 최대 10초 폴링 순으로 확인
+      // prepare 응답이 debate 진입보다 늦게 오는 경우를 커버
+      let effectivePreparedId = preparedSessionId;
+
+      if (!effectivePreparedId) {
+        const deadline = Date.now() + 10000;
+        while (Date.now() < deadline) {
+          if (ctrl.signal.aborted) return;
+          try {
+            const stored = JSON.parse(sessionStorage.getItem('capstone_prepared_session'));
+            if (stored?.sessionId && JSON.stringify(stored.debateParams) === JSON.stringify(debateParams)) {
+              effectivePreparedId = stored.sessionId;
+              break;
+            }
+          } catch {}
+          await new Promise((r) => setTimeout(r, 300));
+        }
+      }
+
+      if (ctrl.signal.aborted) return;
+
+      // preparedSessionId 가 있으면 버퍼 replay 스트림 사용, 없으면 직접 init
+      const sseUrl = effectivePreparedId
+        ? buildApiUrl(`/api/debates/${effectivePreparedId}/stream`)
+        : buildApiUrl('/api/debates');
+      const sseOptions = effectivePreparedId
+        ? { method: 'GET', headers: { Accept: 'text/event-stream' } }
+        : { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' }, body: JSON.stringify(debateParams) };
+
       try {
         for await (const { type, data } of readSSE(
           sseUrl,
@@ -364,21 +389,33 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
     async (content, phase = 'opening', pendingAttack = null, isChained = false) => {
       const stage = PHASE_TO_STAGE[phase] ?? 1;
       const sid = sessionIdRef.current;
+      const normalizedContent = (content ?? '').trim();
+      const normalizedPendingAttack = (pendingAttack ?? '').trim() || null;
 
-      // 사용자 로그 즉시 표시 (자동 체인된 공격은 이미 첫 말풍선에 합쳐졌으므로 스킵)
+      if (!normalizedContent) return;
+
+      const userBubbleType = phase === 'free_rebuttal'
+        ? (isChained ? '공격' : '답변')
+        : (PHASE_TO_TYPE[phase] ?? '발언');
+
+      if (phase === 'free_rebuttal' && !isChained) {
+        freeRebuttalUserTurnCountRef.current += 1;
+        setFreeRebuttalUserTurnCount(freeRebuttalUserTurnCountRef.current);
+      }
+
+      // 사용자 로그 즉시 표시
+      // - isChained=false: 답변(또는 단일 발언) 말풍선
+      // - isChained=true : 자동 체인된 공격 말풍선 (별도 bubble)
       if (!isChained) {
-        const displayText = pendingAttack
-          ? `**답변**\n${content}\n\n**공격**\n${pendingAttack}`
-          : content;
         const userLog = (debateParams && phase !== 'opening')
           ? {
               id: `user-${phase}-${Date.now()}`,
               stage,
               side: userStance,
               speaker: '나',
-              type: PHASE_TO_TYPE[phase] ?? '발언',
+              type: userBubbleType,
               phase,
-              text: displayText,
+              text: normalizedContent,
               isUser: true,
             }
           : (() => {
@@ -390,11 +427,23 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
                 speaker: userEntry?.label ?? '나',
                 type: '입론',
                 turnNumber: STAGE1_ORDER.findIndex((e) => e.isUser),
-                text: displayText,
+                text: normalizedContent,
                 isUser: true,
               };
             })();
         setVisibleLogs((prev) => [...prev, userLog]);
+      } else {
+        // 공격 말풍선 별도 표시 (자동 체인 시)
+        setVisibleLogs((prev) => [...prev, {
+          id: `user-attack-${phase}-${Date.now()}`,
+          stage,
+          side: userStance,
+          speaker: '나',
+          type: userBubbleType,
+          phase,
+          text: normalizedContent,
+          isUser: true,
+        }]);
       }
       setAwaitingUserTurn(false);
       if (stage === 1) setOpeningComplete(true);
@@ -456,7 +505,7 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
-            body: JSON.stringify({ content }),
+            body: JSON.stringify({ content: normalizedContent }),
           },
           ctrl.signal,
         )) {
@@ -475,10 +524,17 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
             if (finished) {
               if (draft) setSynthesisDraft(draft);
               setDebateComplete(true);
-            } else if (pendingAttack && wf === 'user_free_rebuttal') {
-              // 답변 제출 후 → 공격을 자동으로 이어서 제출 (말풍선은 첫 번째에 합쳐졌으므로 isChained=true)
-              await submitTurnRef.current(pendingAttack, 'free_rebuttal', null, true);
+            } else if (
+              normalizedPendingAttack &&
+              wf === 'user_free_rebuttal' &&
+              phase === 'free_rebuttal' &&
+              !isChained &&
+              freeRebuttalUserTurnCountRef.current <= 1
+            ) {
+              // 답변 제출 후 같은 단계가 유지될 때만 공격을 자동으로 별도 제출
+              await submitTurnRef.current(normalizedPendingAttack, 'free_rebuttal', null, true);
             } else {
+              // 백엔드가 다른 단계로 넘어갔다면 pendingAttack은 자동 폐기
               queueAwaitUserRef.current = true;
               if (!isPlayingRef.current) setAwaitingUserTurn(true);
             }
@@ -510,6 +566,7 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
     error,
     sessionId,
     waitingFor,
+    stage3CanAttack: freeRebuttalUserTurnCount === 0,
     synthesisDraft,
     submitOpening,
     submitTurn,

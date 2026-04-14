@@ -71,7 +71,14 @@ const App = () => {
     if (stage !== 3 || !debateParams) return;
     let cancelled = false;
     prepareDebate(debateParams)
-      .then(({ sessionId }) => { if (!cancelled) setPreparedSessionId(sessionId); })
+      .then(({ sessionId }) => {
+        if (cancelled) return;
+        setPreparedSessionId(sessionId);
+        // 토론 진입 전에 prepare가 완료되지 않아도 sessionStorage로 전달
+        try {
+          sessionStorage.setItem('capstone_prepared_session', JSON.stringify({ sessionId, debateParams }));
+        } catch {}
+      })
       .catch((err) => console.warn('[prepare] 실패:', err));
     return () => { cancelled = true; };
   }, [stage, debateParams]);
@@ -87,6 +94,7 @@ const App = () => {
     setAiStances({ pro: [5, 3, 1], con: [5, 3, 1] });
     setDebateParams(null);
     setPreparedSessionId(null);
+    try { sessionStorage.removeItem('capstone_prepared_session'); } catch {}
     setTutorialOpen(false);
     setTutorialStep(0);
   };

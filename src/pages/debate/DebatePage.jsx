@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 
 const DEBATE_STORAGE_KEY = 'capstone_debate_session';
@@ -50,8 +50,67 @@ export default function DebatePage({
   const [stage3Cycle]   = useState(1);
   const [myTurnOverride, setMyTurnOverride] = useState(true);
   const [stage3Opponent, setStage3Opponent] = useState(null);
+  const expectedOpponentCount = Math.max(
+    1,
+    Number(String(debateParams?.debateFormat ?? '').split(':')[0]) || agentCount || 1,
+  );
 
-  const { logs, loading, error, isTyping, awaitingUserTurn, submitOpening, openingSubmitted, openingComplete, debateComplete, waitingFor, submitTurn } = useDebateLogs(debateParams, agentCount, userStance, preparedSessionId);
+  const {
+    logs,
+    loading,
+    error,
+    isTyping,
+    awaitingUserTurn,
+    submitOpening,
+    openingSubmitted,
+    openingComplete,
+    debateComplete,
+    waitingFor,
+    stage3CanAttack,
+    submitTurn,
+  } = useDebateLogs(debateParams, agentCount, userStance, preparedSessionId);
+
+  const summarizeOpening = (text) => {
+    if (!text) return '입론 요약 정보가 없습니다.';
+    const stripped = text
+      .replace(/```[\s\S]*?```/g, ' ')
+      .replace(/#+\s*/g, ' ')
+      .replace(/\*\*/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const firstSentence = stripped.split(/[.!?]\s/)[0]?.trim();
+    const summary = firstSentence && firstSentence.length > 10 ? firstSentence : stripped;
+    return summary.length > 110 ? `${summary.slice(0, 110)}...` : summary;
+  };
+
+  const stage3Opponents = useMemo(() => {
+    const opponentSide = userStance === 'pro' ? 'con' : 'pro';
+    const openingLogs = logs.filter((log) => log.stage === 1 && !log.moderator && !log.isUser);
+    const deduped = openingLogs
+      .filter((log) => log.side === opponentSide)
+      .filter((log, index, arr) => {
+        const key = String(log.speaker ?? log.id);
+        return arr.findIndex((x) => String(x.speaker ?? x.id) === key) === index;
+      })
+      .map((log) => ({
+        id: String(log.speaker ?? log.id),
+        label: String(log.speaker ?? '상대'),
+        stance: summarizeOpening(log.text),
+      }));
+
+    return deduped.slice(0, expectedOpponentCount);
+  }, [logs, userStance, expectedOpponentCount]);
+
+  useEffect(() => {
+    if (currentStage !== 3 || stage3Opponent) return;
+    if (expectedOpponentCount === 1 && stage3Opponents.length >= 1) {
+      setStage3Opponent(stage3Opponents[0]);
+      return;
+    }
+    if (stage3Opponents.length === 1) {
+      setStage3Opponent(stage3Opponents[0]);
+    }
+  }, [currentStage, stage3Opponents, stage3Opponent, expectedOpponentCount]);
 
   useEffect(() => {
     if (openingComplete) {
@@ -98,11 +157,14 @@ export default function DebatePage({
       ? awaitingUserTurn
       : (currentStage < 5 && myTurnOverride);
   const isProSide = userStance === 'pro';
+  const isRoleReversalStage = currentStage === 4;
+  const effectiveIsProSide = isRoleReversalStage ? !isProSide : isProSide;
+  const canUseStage3Attack = !debateParams || (waitingFor === 'user_free_rebuttal' && stage3CanAttack);
 
   const getTurnDesc = () => {
     if (currentStage === 1) return `입론 ${stage1TurnIdx + 1}/4 — ${STAGE1_ORDER[stage1TurnIdx].label} 발언 중`;
     if (currentStage === 2) return `연쇄 논박 ${STAGE2_ROUNDS[stage2Round].round}차 — ${STAGE2_ROUNDS[stage2Round].desc}`;
-    if (currentStage === 3) return `자유 논박 ${stage3Cycle}사이클 — 사용자 ↔ ${STAGE3_PAIRED_AGENT_LABEL}`;
+    if (currentStage === 3) return `자유 논박 ${stage3Cycle}사이클 — 사용자 ↔ ${stage3Opponent?.label ?? STAGE3_PAIRED_AGENT_LABEL}`;
     if (currentStage === 4) return '역할 반전 — 반대 2 (나) → 찬성측 논리 방어';
     return '판정단 분석 진행 중';
   };
@@ -152,7 +214,11 @@ export default function DebatePage({
   };
 
   const mergedLogs = logs;
-  const showStage3Modal = currentStage === 3 && !stage3Opponent;
+  const showStage3Modal =
+    currentStage === 3 &&
+    !stage3Opponent &&
+    expectedOpponentCount > 1 &&
+    stage3Opponents.length > 1;
 
   return (
     <div className="h-screen overflow-hidden bg-[linear-gradient(135deg,#F5F5F4,#E7E5E4)] text-stone-800 font-sans selection:bg-stone-200 selection:text-stone-900">
@@ -167,7 +233,10 @@ export default function DebatePage({
       `}</style>
 
       {showStage3Modal && (
-        <Stage3OpponentModal onSelect={(opp) => setStage3Opponent(opp)} />
+        <Stage3OpponentModal
+          opponents={stage3Opponents}
+          onSelect={(opp) => setStage3Opponent(opp)}
+        />
       )}
 
       <main className="relative mx-auto h-full max-w-[1920px] p-3 sm:p-4 lg:p-5">
@@ -188,9 +257,11 @@ export default function DebatePage({
             <ChatPanel
               logs={mergedLogs}
               currentStage={currentStage}
+              waitingFor={waitingFor}
               isFinalize={waitingFor === 'user_finalize'}
               isMyTurn={isMyTurn}
-              isProSide={isProSide}
+              isProSide={effectiveIsProSide}
+              stage3CanAttack={canUseStage3Attack}
               isTyping={isTyping}
               onSubmitOpening={submitOpening}
               openingLoading={loading}

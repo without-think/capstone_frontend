@@ -1,6 +1,4 @@
-import { STAGE3_OPPONENTS } from './mockData';
-
-export default function Stage3OpponentModal({ onSelect }) {
+export default function Stage3OpponentModal({ opponents = [], onSelect }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-sm">
       <div className="w-[380px] rounded-[32px] border border-white/80 bg-white/95 p-7 shadow-2xl backdrop-blur-md">
@@ -14,7 +12,7 @@ export default function Stage3OpponentModal({ onSelect }) {
 
         {/* 상대 선택 카드 */}
         <div className="mt-5 grid grid-cols-2 gap-3">
-          {STAGE3_OPPONENTS.map((opp) => (
+          {opponents.map((opp) => (
             <button
               key={opp.id}
               onClick={() => onSelect(opp)}
