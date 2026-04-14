@@ -6,13 +6,14 @@ import { MAX_ARGUMENT_TABS } from './mockData';
 export default function InputComposer({
   isMyTurn,
   isProSide,
+  isFinalize,
   currentStage,
   onSubmitOpening,
   openingLoading,
   openingError,
   openingSubmitted,
   openingComplete,
-  onSubmitStage3,
+  onSubmitTurn,
   stage3Opponent,
 }) {
   const [composerTab, setComposerTab] = useState('intro');
@@ -106,15 +107,28 @@ export default function InputComposer({
 
   // ── Stage 3 전송 ──────────────────────────────────────────────────────────
   const handleSendStage3 = () => {
-    if (!onSubmitStage3) return;
-    const entries = [
-      stage3Answer.trim() && { type: '답변', content: stage3Answer.trim() },
-      stage3Attack.trim() && { type: '공격', content: stage3Attack.trim() },
-    ].filter(Boolean);
-    if (!entries.length) return;
-    onSubmitStage3(entries);
+    if (!onSubmitTurn) return;
+    const answer = stage3Answer.trim();
+    const attack = stage3Attack.trim();
+    if (!answer && !attack) return;
+
+    if (answer && attack) {
+      // 답변 먼저 제출, 공격은 자동으로 이어서 제출 (말풍선 2개)
+      onSubmitTurn(answer, attack);
+    } else {
+      onSubmitTurn(answer || attack);
+    }
     setStage3Answer('');
     setStage3Attack('');
+  };
+
+  // ── Stage 2/4/5 전송 ─────────────────────────────────────────────────────
+  const handleSendTurn = () => {
+    if (!onSubmitTurn) return;
+    const content = composerIntro.trim();
+    if (!content) return;
+    onSubmitTurn(content);
+    setComposerIntro('');
   };
 
   // ── 대기 중 화면 ──────────────────────────────────────────────────────────
@@ -233,7 +247,7 @@ export default function InputComposer({
           </div>
           {(currentStage === 4 || currentStage === 5) && (
             <div className="mt-1 text-[11px] font-medium text-stone-400">
-              {currentStage === 4 ? '역할 반전: 반대측이었던 내가 찬성 입장으로 발언' : '종합: 판정단 분석 진행 중'}
+              {currentStage === 4 ? '역할 반전: 반대측이었던 내가 찬성 입장으로 발언' : isFinalize ? '' : '종합: 판정단 분석 진행 중'}
             </div>
           )}
         </div>
@@ -265,23 +279,42 @@ export default function InputComposer({
               />
             </>
           ) : (
-            <textarea
-              value={composerIntro}
-              onChange={(e) => setComposerIntro(e.target.value)}
-              placeholder={isProSide ? '발언을 입력해주세요.' : '반박을 입력해주세요.'}
-              className="w-full min-h-[96px] resize-none bg-transparent px-4 py-3 text-[14px] font-medium text-stone-800 placeholder:text-stone-400 focus:outline-none hide-scrollbar"
-            />
+            <>
+              {isFinalize && (
+                <div className={`mx-3 mt-3 mb-1 rounded-2xl px-4 py-2.5 flex items-center gap-2 ${
+                  isProSide
+                    ? 'bg-blue-50 border border-blue-200'
+                    : 'bg-rose-50 border border-rose-200'
+                }`}>
+                  <span className="text-lg">✦</span>
+                  <div>
+                    <p className={`text-[13px] font-extrabold ${isProSide ? 'text-blue-700' : 'text-rose-700'}`}>
+                      최종 의견을 입력해주세요
+                    </p>
+                    <p className="text-[11px] font-medium text-stone-500 mt-0.5">
+                      이 토론에서 도달한 우리의 최적해를 제시합니다.
+                    </p>
+                  </div>
+                </div>
+              )}
+              <textarea
+                value={composerIntro}
+                onChange={(e) => setComposerIntro(e.target.value)}
+                placeholder={isFinalize ? '우리의 최적해를 입력하세요.' : isProSide ? '발언을 입력해주세요.' : '반박을 입력해주세요.'}
+                className="w-full min-h-[96px] resize-none bg-transparent px-4 py-3 text-[14px] font-medium text-stone-800 placeholder:text-stone-400 focus:outline-none hide-scrollbar"
+              />
+            </>
           )}
         </div>
 
         <button
           className={`mt-auto flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-full text-white transition-all shadow-md hover:scale-105 ${
-            (openingLoading || openingSubmitted || currentStage !== 1)
+            (currentStage === 1 && (openingLoading || openingSubmitted))
               ? 'bg-stone-300 cursor-not-allowed'
               : isProSide ? 'bg-blue-500 hover:bg-blue-600' : 'bg-rose-500 hover:bg-rose-600'
           }`}
-          onClick={handleSendOpening}
-          disabled={openingLoading || openingSubmitted || currentStage !== 1}
+          onClick={currentStage === 1 ? handleSendOpening : handleSendTurn}
+          disabled={currentStage === 1 && (openingLoading || openingSubmitted)}
         >
           <SendHorizonal size={16} className="ml-0.5" />
         </button>

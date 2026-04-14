@@ -3,7 +3,9 @@ import { STAGES } from './mockData';
 
 export default function StepperPanel({
   currentStage,
-  setCurrentStage,
+  viewStage,
+  setViewStage,
+  onScrollToStage,
   getTurnDesc,
   progress,
   isMyTurn,
@@ -15,18 +17,20 @@ export default function StepperPanel({
       {/* 단계 스테퍼 */}
       <div className="flex items-center gap-0.5 overflow-x-auto hide-scrollbar">
         {STAGES.map((stage, i) => {
-          const isDone   = currentStage > stage.id;
-          const isActive = currentStage === stage.id;
+          const isDone    = currentStage > stage.id;   // 완료된 단계
+          const isActive  = viewStage === stage.id;    // 현재 보고 있는 단계
+          const isFuture  = stage.id > currentStage;   // 아직 미진행 단계
           return (
             <div key={stage.id} className="flex items-center shrink-0">
               <button
-                onClick={() => setCurrentStage(stage.id)}
+                onClick={() => { if (isFuture) return; setViewStage(stage.id); onScrollToStage?.(stage.id); }}
+                disabled={isFuture}
                 className={`flex h-7 items-center justify-center px-2.5 rounded-full border text-[10px] font-bold transition-all duration-300 whitespace-nowrap ${
                   isActive
                     ? 'border-stone-800 bg-stone-800 text-white shadow-[0_4px_10px_rgba(0,0,0,0.15)]'
                     : isDone
-                      ? 'border-stone-200 bg-white/80 text-stone-500 hover:bg-white'
-                      : 'border-transparent bg-transparent text-stone-400'
+                      ? 'border-stone-200 bg-white/80 text-stone-500 hover:bg-white cursor-pointer'
+                      : 'border-transparent bg-transparent text-stone-300 cursor-not-allowed'
                 }`}
               >
                 {stage.label}

@@ -57,12 +57,16 @@ export default function SpeechBubble({ log }) {
     return '전체 토론자';
   };
   const avatarTone = isMine
-    ? 'bg-stone-800 text-white'
+    ? log.side === 'pro'
+      ? 'bg-blue-500 text-white'
+      : 'bg-rose-500 text-white'
     : log.side === 'pro'
       ? 'bg-blue-100 text-blue-700 border border-blue-200'
       : 'bg-rose-100 text-rose-700 border border-rose-200';
   const bubbleTone = isMine
-    ? 'bg-stone-800 text-white rounded-[20px] rounded-tr-[6px]'
+    ? log.side === 'pro'
+      ? 'bg-blue-500 text-white rounded-[20px] rounded-tr-[6px]'
+      : 'bg-rose-500 text-white rounded-[20px] rounded-tr-[6px]'
     : log.side === 'pro'
       ? 'bg-white/94 border border-blue-300/90 text-stone-800 rounded-[20px] rounded-tl-[6px] backdrop-blur-sm'
       : 'bg-white/94 border border-rose-300/90 text-stone-800 rounded-[20px] rounded-tl-[6px] backdrop-blur-sm';
@@ -98,7 +102,7 @@ export default function SpeechBubble({ log }) {
             </div>
 
             {/* 본문 */}
-            <div className="font-medium text-[15px] text-stone-800">
+            <div className={`font-medium text-[15px] ${isMine ? 'text-white' : 'text-stone-800'}`}>
               {renderMarkdown(log.text, isMine)}
             </div>
           </div>

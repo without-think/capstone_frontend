@@ -1,5 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
+
+const DEBATE_STORAGE_KEY = 'capstone_debate_session';
+function clearDebateStorage() {
+  try { sessionStorage.removeItem(DEBATE_STORAGE_KEY); } catch {}
+}
 
 import ChatPanel from './ChatPanel';
 import StepperPanel from './StepperPanel';
@@ -14,8 +19,15 @@ import {
   STAGE3_PAIRED_AGENT_LABEL,
   ANALYSIS_BY_STAGE,
   ANALYSIS_BY_SPEAKER,
-  STAGE3_MOCK_RESPONSES,
 } from './mockData';
+
+const STAGE_TO_PHASE = {
+  1: 'opening',
+  2: 'chained_rebuttal',
+  3: 'free_rebuttal',
+  4: 'role_reversal',
+  5: 'synthesis',
+};
 
 /**
  * @param {function} onBack       - 뒤로가기 콜백
@@ -27,20 +39,19 @@ export default function DebatePage({
   onBack = () => console.log('back'),
   onExit = () => console.log('exit'),
   debateParams = null,
+  preparedSessionId = null,
   agentCount = 2,
   userStance = 'pro',
 }) {
   const [currentStage, setCurrentStage] = useState(1);
+  const [viewStage, setViewStage] = useState(1); // 스테퍼에서 선택한 단계 (보기용)
   const [stage1TurnIdx] = useState(3);
   const [stage2Round]   = useState(2);
   const [stage3Cycle]   = useState(1);
   const [myTurnOverride, setMyTurnOverride] = useState(true);
   const [stage3Opponent, setStage3Opponent] = useState(null);
-  const [stage3Messages, setStage3Messages] = useState([]);
-  const [stage3Typing, setStage3Typing] = useState(null);
-  const stage3ResponseIdx = useRef(0);
 
-  const { logs, loading, error, isTyping, awaitingUserTurn, submitOpening, openingSubmitted, openingComplete, debateComplete } = useDebateLogs(debateParams, agentCount, userStance);
+  const { logs, loading, error, isTyping, awaitingUserTurn, submitOpening, openingSubmitted, openingComplete, debateComplete, waitingFor, submitTurn } = useDebateLogs(debateParams, agentCount, userStance, preparedSessionId);
 
   useEffect(() => {
     if (openingComplete) {
@@ -57,10 +68,36 @@ export default function DebatePage({
     setCurrentStage((prev) => (maxVisibleStage > prev ? maxVisibleStage : prev));
   }, [logs]);
 
-  // stage 1(입론): 에이전트 큐가 끝난 후 사용자 입력 활성화
-  // 그 외 단계: myTurnOverride로 제어
-  const isMyTurn  = currentStage === 1 ? awaitingUserTurn : (currentStage < 5 && myTurnOverride);
-  const isProSide = currentStage === 4;
+  // waitingFor → 자동 단계 전환 및 사용자 턴 활성화
+  useEffect(() => {
+    if (!waitingFor) return;
+    const WAITING_TO_STAGE = {
+      user_opening: 1,
+      user_rebuttal: 2,
+      user_free_rebuttal: 3,
+      user_role_reversal: 4,
+      user_synthesis: 5,
+      user_finalize: 5,
+      chained_rebuttal_node: 2,
+      free_rebuttal_node: 3,
+      role_reversal_node: 4,
+      synthesis_discuss_node: 5,
+    };
+    const stage = WAITING_TO_STAGE[waitingFor];
+    if (stage) setCurrentStage((prev) => Math.max(prev, stage));
+  }, [waitingFor]);
+
+  // currentStage가 올라가면 viewStage도 자동으로 따라옴
+  useEffect(() => {
+    setViewStage((prev) => (currentStage > prev ? currentStage : prev));
+  }, [currentStage]);
+
+  const isMyTurn = debateParams
+    ? awaitingUserTurn
+    : (currentStage === 1 || currentStage === 3)
+      ? awaitingUserTurn
+      : (currentStage < 5 && myTurnOverride);
+  const isProSide = userStance === 'pro';
 
   const getTurnDesc = () => {
     if (currentStage === 1) return `입론 ${stage1TurnIdx + 1}/4 — ${STAGE1_ORDER[stage1TurnIdx].label} 발언 중`;
@@ -107,51 +144,15 @@ export default function DebatePage({
   };
   const speakerLabel = getSpeakerLabel();
 
-  const handleStage3Submit = (entries) => {
-    // entries: [{ type, content }, ...] — 답변·공격 동시 전송
-    const userMsgs = entries.map(({ type, content }, i) => ({
-      id: `s3-user-${Date.now()}-${i}`,
-      stage: 3,
-      side: 'pro',
-      speaker: '나',
-      type,
-      text: content,
-      isUser: true,
-    }));
-    setStage3Messages((prev) => [...prev, ...userMsgs]);
+  // 단계별 사용자 발언 제출 (stages 2~5)
+  const handleSubmitTurn = (content, pendingAttack = null) => {
+    const phase = STAGE_TO_PHASE[currentStage] ?? 'opening';
+    submitTurn(content, phase, pendingAttack);
     setMyTurnOverride(false);
-
-    // 상대 타이핑 인디케이터
-    const opponentLabel = stage3Opponent?.label ?? '상대';
-    setStage3Typing(opponentLabel);
-
-    // mock 응답 딜레이 (2~3 초)
-    const delay = 2000 + Math.random() * 1000;
-    setTimeout(() => {
-      const resp = STAGE3_MOCK_RESPONSES[stage3ResponseIdx.current % STAGE3_MOCK_RESPONSES.length];
-      stage3ResponseIdx.current += 1;
-      setStage3Messages((prev) => [
-        ...prev,
-        {
-          id: `s3-opp-${Date.now()}`,
-          stage: 3,
-          side: 'con',
-          speaker: opponentLabel,
-          type: resp.type,
-          text: resp.text,
-          isUser: false,
-        },
-      ]);
-      setStage3Typing(null);
-      setMyTurnOverride(true);
-    }, delay);
   };
 
-  const mergedLogs = [...logs, ...stage3Messages];
+  const mergedLogs = logs;
   const showStage3Modal = currentStage === 3 && !stage3Opponent;
-
-  // 백엔드가 user_opening을 기다리는 초기 상태: 빈 채팅 + 사용자 차례
-  const isWaitingForUserOpening = currentStage === 1 && awaitingUserTurn && logs.length === 0;
 
   return (
     <div className="h-screen overflow-hidden bg-[linear-gradient(135deg,#F5F5F4,#E7E5E4)] text-stone-800 font-sans selection:bg-stone-200 selection:text-stone-900">
@@ -184,30 +185,19 @@ export default function DebatePage({
 
           {/* 왼쪽: 채팅 패널 */}
           <div className="flex flex-col h-full min-h-0">
-            {/* SSE 오류 배너 */}
-            {error && (
-              <div className="mb-2 rounded-2xl bg-red-50 border border-red-200 px-4 py-2.5 text-[13px] font-semibold text-red-600">
-                연결 오류: {error}
-              </div>
-            )}
-            {/* 사용자 입론 안내 배너 */}
-            {isWaitingForUserOpening && (
-              <div className="mb-2 rounded-2xl bg-blue-50 border border-blue-200 px-4 py-2.5 text-[13px] font-semibold text-blue-700">
-                AI 에이전트들이 준비됐습니다. 아래 입력창에 먼저 입론을 작성하고 전송하면 토론이 시작됩니다.
-              </div>
-            )}
             <ChatPanel
               logs={mergedLogs}
               currentStage={currentStage}
+              isFinalize={waitingFor === 'user_finalize'}
               isMyTurn={isMyTurn}
               isProSide={isProSide}
-              isTyping={stage3Typing ?? isTyping}
+              isTyping={isTyping}
               onSubmitOpening={submitOpening}
               openingLoading={loading}
               openingError={error}
               openingSubmitted={openingSubmitted}
               openingComplete={openingComplete}
-              onSubmitStage3={handleStage3Submit}
+              onSubmitTurn={handleSubmitTurn}
               stage3Opponent={stage3Opponent}
             />
           </div>
@@ -216,7 +206,12 @@ export default function DebatePage({
           <aside className="hidden lg:flex lg:min-h-0 lg:flex-col lg:gap-4 lg:overflow-y-auto hide-scrollbar">
             <StepperPanel
               currentStage={currentStage}
-              setCurrentStage={setCurrentStage}
+              viewStage={viewStage}
+              setViewStage={setViewStage}
+              onScrollToStage={(stageId) => {
+                const el = document.getElementById(`stage-anchor-${stageId}`);
+                el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
               getTurnDesc={getTurnDesc}
               progress={progress}
               isMyTurn={isMyTurn}
@@ -239,7 +234,7 @@ export default function DebatePage({
           {debateComplete && (
             <button
               type="button"
-              onClick={onExit}
+              onClick={() => { clearDebateStorage(); onExit(); }}
               className="flex items-center gap-4 rounded-full bg-stone-900 px-7 py-3.5 text-base font-bold text-white shadow-2xl transition-all hover:scale-105 hover:bg-black active:scale-95 sm:px-12 sm:py-5 sm:text-xl"
             >
               토론 종료

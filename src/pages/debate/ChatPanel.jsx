@@ -49,6 +49,7 @@ function TypingIndicator({ speaker }) {
 export default function ChatPanel({
   logs,
   currentStage,
+  isFinalize,
   isMyTurn,
   isProSide,
   isTyping,
@@ -57,7 +58,7 @@ export default function ChatPanel({
   openingError,
   openingSubmitted,
   openingComplete,
-  onSubmitStage3,
+  onSubmitTurn,
   stage3Opponent,
 }) {
   const scrollRef = useRef(null);
@@ -82,20 +83,27 @@ export default function ChatPanel({
         ref={scrollRef}
         className="hide-scrollbar flex-1 overflow-y-auto p-4 space-y-4"
       >
-        {currentStage === 1 && !hasStage1Moderator && (
+        {!hasStage1Moderator && (
           <SpeechBubble log={openingModeratorGuide} />
         )}
-        {logs
-          .filter((log) => log.stage <= currentStage)
-          .map((log) => (
-            <SpeechBubble key={log.id} log={log} />
-          ))}
+        {(() => {
+          const seenStages = new Set();
+          return logs.map((log) => {
+            const isFirstOfStage = typeof log.stage === 'number' && !seenStages.has(log.stage);
+            if (isFirstOfStage) seenStages.add(log.stage);
+            return (
+              <div key={log.id} id={isFirstOfStage ? `stage-anchor-${log.stage}` : undefined}>
+                <SpeechBubble log={log} />
+              </div>
+            );
+          });
+        })()}
         {/* 타이핑 인디케이터 */}
         {isTyping && <TypingIndicator speaker={isTyping} />}
       </div>
 
       {/* 입력 영역 */}
-      {currentStage < 5 && (
+      {currentStage <= 5 && (
         <div className="px-3 pb-3 pt-0 bg-transparent">
           <div className={`rounded-[28px] p-2 transition-all duration-300 border shadow-sm ${
             isMyTurn
@@ -107,13 +115,14 @@ export default function ChatPanel({
             <InputComposer
               isMyTurn={isMyTurn}
               isProSide={isProSide}
+              isFinalize={isFinalize}
               currentStage={currentStage}
               onSubmitOpening={onSubmitOpening}
               openingLoading={openingLoading}
               openingError={openingError}
               openingSubmitted={openingSubmitted}
               openingComplete={openingComplete}
-              onSubmitStage3={onSubmitStage3}
+              onSubmitTurn={onSubmitTurn}
               stage3Opponent={stage3Opponent}
             />
           </div>

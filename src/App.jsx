@@ -12,12 +12,13 @@ import OnboardingModal from './components/OnboardingModal';
 import SubTopicView from './pages/SubTopicView';
 import ParamsView from './pages/ParamsView';
 import PreSurvey from './pages/PreSurvey';
-import PreQuiz from './pages/PreQuiz';
+import PreQuiz from './pages/PreQuiz';  
 import FloatingActionBar from './components/FloatingActionBar';
 import DebatePage from './pages/debate/DebatePage';
 import PostQuiz from './pages/PostQuiz';
 import PostDebateStats from './pages/PostDebateStats';
 import DebateTutorialModal from './components/DebateTutorialModal';
+import { prepareDebate } from './api/debatesApi';
 
 const App = () => {
   const getInitialRoute = () => {
@@ -37,6 +38,7 @@ const App = () => {
   const [aiStances, setAiStances] = useState({ pro: [5, 3, 1], con: [5, 3, 1] });
   const [topics, setTopics] = useState(TOPICS); // 기본값: 하드코딩 데이터 (API 실패 시 fallback)
   const [debateParams, setDebateParams] = useState(null);
+  const [preparedSessionId, setPreparedSessionId] = useState(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
   const debateEnterTimeoutRef = useRef(null);
@@ -64,6 +66,16 @@ const App = () => {
     ? `linear-gradient(to bottom right, ${activeData.accent}22, rgba(245,245,244,0.1), rgba(245,245,244,0.02))`
     : 'transparent';
 
+  // stage 3(사전 근거 작성) 진입 시 AI 입론 백그라운드 생성 시작
+  useEffect(() => {
+    if (stage !== 3 || !debateParams) return;
+    let cancelled = false;
+    prepareDebate(debateParams)
+      .then(({ sessionId }) => { if (!cancelled) setPreparedSessionId(sessionId); })
+      .catch((err) => console.warn('[prepare] 실패:', err));
+    return () => { cancelled = true; };
+  }, [stage, debateParams]);
+
   const resetParams = () => {
     if (debateEnterTimeoutRef.current) {
       window.clearTimeout(debateEnterTimeoutRef.current);
@@ -74,6 +86,7 @@ const App = () => {
     setAgentCount(1);
     setAiStances({ pro: [5, 3, 1], con: [5, 3, 1] });
     setDebateParams(null);
+    setPreparedSessionId(null);
     setTutorialOpen(false);
     setTutorialStep(0);
   };
@@ -132,6 +145,7 @@ const App = () => {
       userIntensity: 3,
       debateFormat: `${agentCount}:${agentCount}`,
       agentIntensities,
+      maxCycle: 3,
     });
     setStage(2); // 참여설정 → 사전설문
   };
@@ -248,6 +262,7 @@ const App = () => {
       {isDebateRoute && (
         <DebatePage
           debateParams={debateParams}
+          preparedSessionId={preparedSessionId}
           userStance={userStance}
           agentCount={agentCount}
           onBack={() => navigate('/topics')}
