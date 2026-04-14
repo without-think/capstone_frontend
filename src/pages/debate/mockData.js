@@ -82,46 +82,31 @@ export const STAGE3_MOCK_RESPONSES = [
 
 // ─── 대립 분석 설정 ────────────────────────────────────────────────────────────
 export const ANALYSIS_LAYER_CONFIG = [
-  {
-    key: 'positionGap',
-    label: '입장 거리',
-    model: 'jhgan/ko-sroberta-multitask',
-    reason: '전반적인 의도와 관점 차이를 안정적으로 포착',
-  },
-  {
-    key: 'evidenceClash',
-    label: '충돌 강도',
-    model: 'snunlp/KR-SBERT-V41-STSB',
-    reason: '수치와 팩트 단위의 미세한 충돌 식별에 강함',
-  },
-  {
-    key: 'counterStrike',
-    label: '공격성',
-    model: 'Qwen2.5-7B-Instruct',
-    reason: '실제 교전 여부와 반박 타격을 추론 가능',
-  },
+  { key: 'argumentScore', label: '논증력' },
+  { key: 'evidenceScore', label: '근거력' },
+  { key: 'languageScore', label: '언어력' },
 ];
 
 export const ANALYSIS_BY_STAGE = {
-  1: { positionGap: 0.81, evidenceClash: 0.35, counterStrike: 0.18, conflictIndex: 49 },
-  2: { positionGap: 0.84, evidenceClash: 0.63, counterStrike: 0.74, conflictIndex: 73 },
-  3: { positionGap: 0.88, evidenceClash: 0.79, counterStrike: 0.86, conflictIndex: 82 },
-  4: { positionGap: 0.52, evidenceClash: 0.48, counterStrike: 0.57, conflictIndex: 51 },
-  5: { positionGap: 0.31, evidenceClash: 0.27, counterStrike: 0.24, conflictIndex: 28 },
+  1: { argumentScore: 0.65, evidenceScore: 0.35, languageScore: 0.55 },
+  2: { argumentScore: 0.72, evidenceScore: 0.63, languageScore: 0.70 },
+  3: { argumentScore: 0.80, evidenceScore: 0.75, languageScore: 0.78 },
+  4: { argumentScore: 0.55, evidenceScore: 0.48, languageScore: 0.52 },
+  5: { argumentScore: 0.40, evidenceScore: 0.35, languageScore: 0.38 },
 };
 
 // 발언자별 레이더 데이터 (stage1 순서 id, stage2 round key)
 export const ANALYSIS_BY_SPEAKER = {
   // stage 1 — 입론
-  pro1:   { positionGap: 0.78, evidenceClash: 0.42, counterStrike: 0.22 },
-  con1:   { positionGap: 0.83, evidenceClash: 0.50, counterStrike: 0.35 },
-  con2:   { positionGap: 0.75, evidenceClash: 0.38, counterStrike: 0.28 },
-  pro2:   { positionGap: 0.88, evidenceClash: 0.65, counterStrike: 0.58 },
+  pro1:   { argumentScore: 0.70, evidenceScore: 0.42, languageScore: 0.60 },
+  con1:   { argumentScore: 0.75, evidenceScore: 0.50, languageScore: 0.65 },
+  con2:   { argumentScore: 0.68, evidenceScore: 0.38, languageScore: 0.58 },
+  pro2:   { argumentScore: 0.82, evidenceScore: 0.65, languageScore: 0.72 },
   // stage 2 — 연쇄 논박 (round 1~4)
-  round1: { positionGap: 0.80, evidenceClash: 0.62, counterStrike: 0.70 },
-  round2: { positionGap: 0.76, evidenceClash: 0.58, counterStrike: 0.65 },
-  round3: { positionGap: 0.85, evidenceClash: 0.72, counterStrike: 0.78 },
-  round4: { positionGap: 0.88, evidenceClash: 0.79, counterStrike: 0.84 },
+  round1: { argumentScore: 0.72, evidenceScore: 0.62, languageScore: 0.68 },
+  round2: { argumentScore: 0.68, evidenceScore: 0.58, languageScore: 0.64 },
+  round3: { argumentScore: 0.78, evidenceScore: 0.72, languageScore: 0.74 },
+  round4: { argumentScore: 0.82, evidenceScore: 0.79, languageScore: 0.80 },
 };
 
 // 단계별 찬성 vs 반대 논리력 점수 (0~100)

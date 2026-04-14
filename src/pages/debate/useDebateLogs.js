@@ -159,6 +159,7 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
   const [waitingFor, setWaitingFor] = useState(null);
   const [synthesisDraft, setSynthesisDraft] = useState(null);
   const [freeRebuttalUserTurnCount, setFreeRebuttalUserTurnCount] = useState(0);
+  const [liveAnalysis, setLiveAnalysis] = useState(null);
   const sessionIdRef = useRef(null);
 
   const queueRef = useRef([]);
@@ -237,6 +238,7 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
     setWaitingFor(null);
     setSynthesisDraft(null);
     setFreeRebuttalUserTurnCount(0);
+    setLiveAnalysis(null);
     sessionIdRef.current = null;
     stage3CycleRef.current = 0;
     firstEntryReceivedRef.current = false;
@@ -374,6 +376,16 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
               queueAwaitUserRef.current = true;
               if (!isPlayingRef.current) setAwaitingUserTurn(true);
             }
+          } else if (type === 'analysis') {
+            setLiveAnalysis({
+              argumentScore: (raw.argumentScore ?? raw.argument_score ?? 0) / 10,
+              evidenceScore: (raw.evidenceScore ?? raw.evidence_score ?? 0) / 10,
+              languageScore: (raw.languageScore ?? raw.language_score ?? 0) / 10,
+              proPercent: raw.proPercent ?? raw.pro_percent ?? 50,
+              conPercent: raw.conPercent ?? raw.con_percent ?? 50,
+              speakerId: raw.speakerId ?? raw.speaker_id ?? null,
+              turnIndex: raw.turnIndex ?? raw.turn_index ?? null,
+            });
           }
         }
       } catch (e) {
@@ -516,6 +528,16 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
             if (log.speaker === '나') continue;
             queueRef.current.push(log);
             if (!isPlayingRef.current) playNextRef.current?.();
+          } else if (type === 'analysis') {
+            setLiveAnalysis({
+              argumentScore: (raw.argumentScore ?? raw.argument_score ?? 0) / 10,
+              evidenceScore: (raw.evidenceScore ?? raw.evidence_score ?? 0) / 10,
+              languageScore: (raw.languageScore ?? raw.language_score ?? 0) / 10,
+              proPercent: raw.proPercent ?? raw.pro_percent ?? 50,
+              conPercent: raw.conPercent ?? raw.con_percent ?? 50,
+              speakerId: raw.speakerId ?? raw.speaker_id ?? null,
+              turnIndex: raw.turnIndex ?? raw.turn_index ?? null,
+            });
           } else if (type === 'waiting') {
             const wf = raw.waiting_for ?? raw.waitingFor ?? null;
             const finished = raw.is_finished ?? raw.isFinished ?? false;
@@ -568,6 +590,7 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
     waitingFor,
     stage3CanAttack: freeRebuttalUserTurnCount === 0,
     synthesisDraft,
+    liveAnalysis,
     submitOpening,
     submitTurn,
   };

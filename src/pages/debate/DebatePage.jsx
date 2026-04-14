@@ -67,6 +67,7 @@ export default function DebatePage({
     debateComplete,
     waitingFor,
     stage3CanAttack,
+    liveAnalysis,
     submitTurn,
   } = useDebateLogs(debateParams, agentCount, userStance, preparedSessionId);
 
@@ -189,7 +190,8 @@ export default function DebatePage({
     }
     return ANALYSIS_BY_STAGE[currentStage];
   };
-  const analysis = getSpeakerAnalysis();
+  // SSE 모드: liveAnalysis 우선, 없으면 mock fallback
+  const analysis = (debateParams && liveAnalysis) ? liveAnalysis : getSpeakerAnalysis();
 
   const getSpeakerLabel = () => {
     if (currentStage === 1) {
@@ -294,7 +296,11 @@ export default function DebatePage({
               analysis={analysis}
               speakerLabel={speakerLabel}
             />
-            <ConflictBarPanel currentStage={currentStage} />
+            <ConflictBarPanel
+              currentStage={currentStage}
+              liveProPercent={liveAnalysis?.proPercent ?? null}
+              liveConPercent={liveAnalysis?.conPercent ?? null}
+            />
           </aside>
 
         </div>

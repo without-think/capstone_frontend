@@ -12,10 +12,12 @@ const SPARKS = [
   { dx:  14, dy:  3,  dur: 0.95, delay: 0.9,  size: 2   },
 ];
 
-export default function ConflictBarPanel({ currentStage }) {
+export default function ConflictBarPanel({ currentStage, liveProPercent = null, liveConPercent = null }) {
   const scores = CONFLICT_BY_STAGE[currentStage] ?? { pro: 50, con: 50 };
   const total = scores.pro + scores.con;
-  const proPct = Math.round((scores.pro / total) * 100);
+  const mockProPct = Math.round((scores.pro / total) * 100);
+  // 실시간 분석 데이터 우선, 없으면 mock
+  const proPct = liveProPercent !== null ? Math.round(liveProPercent) : mockProPct;
   const conPct = 100 - proPct;
 
   const isJudging = currentStage >= JUDGING_FROM_STAGE;
