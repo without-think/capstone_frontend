@@ -178,7 +178,7 @@ export default function DebatePage({
   };
 
   const progress         = getProgressInfo();
-  const showLiveAnalysis = currentStage < 5;
+  const showLiveAnalysis = debateParams ? !debateComplete : currentStage < 5;
 
   const getSpeakerAnalysis = () => {
     if (currentStage === 1) {
@@ -206,7 +206,9 @@ export default function DebatePage({
     if (currentStage === 4) return '역할 반전 발언 중';
     return null;
   };
-  const speakerLabel = getSpeakerLabel();
+  const speakerLabel = (debateParams && liveAnalysis?.resolvedSpeaker)
+    ? liveAnalysis.resolvedSpeaker
+    : getSpeakerLabel();
 
   // 단계별 사용자 발언 제출 (stages 2~5)
   const handleSubmitTurn = (content, pendingAttack = null) => {
@@ -298,6 +300,7 @@ export default function DebatePage({
             />
             <ConflictBarPanel
               currentStage={currentStage}
+              isDebateComplete={debateComplete}
               liveProPercent={liveAnalysis?.proPercent ?? null}
               liveConPercent={liveAnalysis?.conPercent ?? null}
             />

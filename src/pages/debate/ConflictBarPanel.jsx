@@ -1,6 +1,6 @@
 import { CONFLICT_BY_STAGE } from './mockData';
 
-const JUDGING_FROM_STAGE = 4;
+const JUDGING_FROM_STAGE = 5;
 
 // 바 안에서 좌우로 튀는 스파크 (수평 방향만)
 const SPARKS = [
@@ -12,7 +12,7 @@ const SPARKS = [
   { dx:  14, dy:  3,  dur: 0.95, delay: 0.9,  size: 2   },
 ];
 
-export default function ConflictBarPanel({ currentStage, liveProPercent = null, liveConPercent = null }) {
+export default function ConflictBarPanel({ currentStage, isDebateComplete = false, liveProPercent = null, liveConPercent = null }) {
   const scores = CONFLICT_BY_STAGE[currentStage] ?? { pro: 50, con: 50 };
   const total = scores.pro + scores.con;
   const mockProPct = Math.round((scores.pro / total) * 100);
@@ -20,8 +20,8 @@ export default function ConflictBarPanel({ currentStage, liveProPercent = null, 
   const proPct = liveProPercent !== null ? Math.round(liveProPercent) : mockProPct;
   const conPct = 100 - proPct;
 
-  const isJudging = currentStage >= JUDGING_FROM_STAGE;
-  const overlayText = currentStage >= 5 ? '결과 산정 중' : '판정 중';
+  const isJudging = currentStage >= 4 || isDebateComplete;
+  const overlayText = isDebateComplete || currentStage >= 5 ? '결과 산정 중' : '판정 준비 중';
 
   const sparkKeyframes = SPARKS.map((s, i) => `
     @keyframes sp${i} {

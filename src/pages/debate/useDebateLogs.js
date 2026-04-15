@@ -64,20 +64,6 @@ const PHASE_TO_TYPE = {
   synthesis: '종합',
 };
 
-const WAITING_TO_STAGE = {
-  // FastAPI 실제 waitingFor 값
-  user_opening: 1,
-  user_rebuttal: 2,        // 연쇄 논박 사용자 턴
-  user_free_rebuttal: 3,   // 자유 논박 사용자 턴
-  user_role_reversal: 4,   // 역할 반전 사용자 턴
-  user_synthesis: 5,       // 종합 사용자 턴
-  user_finalize: 5,        // 종합 최종 마무리
-  // 구 값 (fallback)
-  chained_rebuttal_node: 2,
-  free_rebuttal_node: 3,
-  role_reversal_node: 4,
-  synthesis_discuss_node: 5,
-};
 
 function makeAgentLabelResolver(savedState = null) {
   const map = savedState ? { ...savedState.map } : {};
@@ -173,6 +159,28 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
   const submitTurnRef = useRef(null); // 재귀 자동제출용 ref
   const firstEntryReceivedRef = useRef(false); // 첫 번째 entry 여부 (입론 첫 에이전트 딜레이 스킵용)
   const freeRebuttalUserTurnCountRef = useRef(0);
+  const analysisByTurnRef = useRef(new Map());
+  // 화면에 표시된 entry의 turnNumber → resolvedSpeaker 기록 (analysis 늦게 올 때 즉시 업데이트용)
+  const displayedTurnsRef = useRef(new Map());
+
+  const buildLiveAnalysisSnapshot = useCallback((raw) => {
+    const argumentScore = (raw.argumentScore ?? raw.argument_score ?? 0) / 10;
+    const evidenceScore = (raw.evidenceScore ?? raw.evidence_score ?? 0) / 10;
+    const languageScore = (raw.languageScore ?? raw.language_score ?? 0) / 10;
+
+    return {
+      argumentScore,
+      evidenceScore,
+      languageScore,
+      positionGap: argumentScore,
+      evidenceClash: evidenceScore,
+      counterStrike: languageScore,
+      proPercent: raw.proPercent ?? raw.pro_percent ?? 50,
+      conPercent: raw.conPercent ?? raw.con_percent ?? 50,
+      speakerId: raw.speakerId ?? raw.speaker_id ?? null,
+      turnIndex: raw.turnIndex ?? raw.turn_index ?? null,
+    };
+  }, []);
 
   // ── 타이머 정리 ─────────────────────────────────────────────────────────────
   const clearTimer = useCallback(() => {
@@ -208,6 +216,19 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
     timerRef.current = setTimeout(() => {
       setIsTyping(null);
       setVisibleLogs((prev) => [...prev, next]);
+      // entry가 화면에 표시될 때 해당 turn의 분석으로 전체 업데이트
+      if (!next.moderator) {
+        const turnKey = next.turnNumber;
+        // 표시된 entry 기록 (analysis가 늦게 도착할 때 즉시 업데이트하기 위함)
+        if (turnKey !== null && turnKey !== undefined) {
+          displayedTurnsRef.current.set(turnKey, next.speaker ?? null);
+        }
+        const cached = (turnKey !== null && turnKey !== undefined)
+          ? analysisByTurnRef.current.get(turnKey)
+          : null;
+        if (cached) setLiveAnalysis({ ...cached, resolvedSpeaker: next.speaker ?? null });
+        // analysis가 아직 안 왔으면 analysis 핸들러에서 displayedTurnsRef 확인 후 업데이트
+      }
       timerRef.current = setTimeout(() => playNextRef.current?.(), 350);
     }, delay);
   };
@@ -243,6 +264,8 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
     stage3CycleRef.current = 0;
     firstEntryReceivedRef.current = false;
     freeRebuttalUserTurnCountRef.current = 0;
+    analysisByTurnRef.current = new Map();
+    displayedTurnsRef.current = new Map();
     resolveLabelRef.current = makeAgentLabelResolver();
     clearDebateSession();
   }, [clearTimer]);
@@ -356,6 +379,7 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
             setSessionId(sid);
           } else if (type === 'entry') {
             const log = buildLogFromSSE(raw, resolveLabelRef.current);
+            console.log(`[SSE stream] entry 수신: speaker=${log.speaker} turn=${log.turnNumber} t=${Date.now()}`);
             // 입론 단계 첫 번째 에이전트는 딜레이 없이 즉시 표시
             if (!firstEntryReceivedRef.current) {
               log.skipDelay = true;
@@ -377,15 +401,20 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
               if (!isPlayingRef.current) setAwaitingUserTurn(true);
             }
           } else if (type === 'analysis') {
-            setLiveAnalysis({
-              argumentScore: (raw.argumentScore ?? raw.argument_score ?? 0) / 10,
-              evidenceScore: (raw.evidenceScore ?? raw.evidence_score ?? 0) / 10,
-              languageScore: (raw.languageScore ?? raw.language_score ?? 0) / 10,
-              proPercent: raw.proPercent ?? raw.pro_percent ?? 50,
-              conPercent: raw.conPercent ?? raw.con_percent ?? 50,
-              speakerId: raw.speakerId ?? raw.speaker_id ?? null,
-              turnIndex: raw.turnIndex ?? raw.turn_index ?? null,
-            });
+            const snapshot = buildLiveAnalysisSnapshot(raw);
+            console.log(`[SSE stream] analysis 수신: turnIndex=${snapshot.turnIndex} t=${Date.now()}`);
+            const storeKey = snapshot.turnIndex ?? Date.now();
+            analysisByTurnRef.current.set(storeKey, snapshot);
+            const isUser = snapshot.speakerId === 'user' || snapshot.speakerId === '사용자';
+            if (isUser) {
+              // 사용자 분석: 즉시 이름+차트 업데이트
+              setLiveAnalysis({ ...snapshot, resolvedSpeaker: '나' });
+            } else if (snapshot.turnIndex !== null && displayedTurnsRef.current.has(snapshot.turnIndex)) {
+              // 버블이 이미 표시된 후 analysis가 도착: 즉시 업데이트
+              const label = displayedTurnsRef.current.get(snapshot.turnIndex);
+              setLiveAnalysis({ ...snapshot, resolvedSpeaker: label });
+            }
+            // 버블 표시 전 analysis 도착: playNextRef에서 버블과 동시에 업데이트
           }
         }
       } catch (e) {
@@ -419,7 +448,7 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
       // - isChained=false: 답변(또는 단일 발언) 말풍선
       // - isChained=true : 자동 체인된 공격 말풍선 (별도 bubble)
       if (!isChained) {
-        const userLog = (debateParams && phase !== 'opening')
+        const userLog = debateParams
           ? {
               id: `user-${phase}-${Date.now()}`,
               stage,
@@ -524,20 +553,24 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
           const raw = JSON.parse(data);
           if (type === 'entry') {
             const log = buildLogFromSSE(raw, resolveLabelRef.current);
+            console.log(`[SSE submit] entry 수신: speaker=${log.speaker} turn=${log.turnNumber} t=${Date.now()}`);
             // 사용자 자신의 entry는 이미 수동으로 추가했으므로 스킵
             if (log.speaker === '나') continue;
             queueRef.current.push(log);
             if (!isPlayingRef.current) playNextRef.current?.();
           } else if (type === 'analysis') {
-            setLiveAnalysis({
-              argumentScore: (raw.argumentScore ?? raw.argument_score ?? 0) / 10,
-              evidenceScore: (raw.evidenceScore ?? raw.evidence_score ?? 0) / 10,
-              languageScore: (raw.languageScore ?? raw.language_score ?? 0) / 10,
-              proPercent: raw.proPercent ?? raw.pro_percent ?? 50,
-              conPercent: raw.conPercent ?? raw.con_percent ?? 50,
-              speakerId: raw.speakerId ?? raw.speaker_id ?? null,
-              turnIndex: raw.turnIndex ?? raw.turn_index ?? null,
-            });
+            const snapshot = buildLiveAnalysisSnapshot(raw);
+            console.log(`[SSE submit] analysis 수신: turnIndex=${snapshot.turnIndex} t=${Date.now()}`);
+            const storeKey = snapshot.turnIndex ?? Date.now();
+            analysisByTurnRef.current.set(storeKey, snapshot);
+            const isUser = snapshot.speakerId === 'user' || snapshot.speakerId === '사용자';
+            if (isUser) {
+              setLiveAnalysis({ ...snapshot, resolvedSpeaker: '나' });
+            } else if (snapshot.turnIndex !== null && displayedTurnsRef.current.has(snapshot.turnIndex)) {
+              const label = displayedTurnsRef.current.get(snapshot.turnIndex);
+              setLiveAnalysis({ ...snapshot, resolvedSpeaker: label });
+            }
+            // 버블 표시 전 도착 시 playNextRef에서 처리
           } else if (type === 'waiting') {
             const wf = raw.waiting_for ?? raw.waitingFor ?? null;
             const finished = raw.is_finished ?? raw.isFinished ?? false;

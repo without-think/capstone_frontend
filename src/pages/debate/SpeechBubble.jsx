@@ -1,7 +1,7 @@
 import { TYPE_STYLES } from './mockData';
 import { renderMarkdown } from './markdownRenderer';
 
-export default function SpeechBubble({ log, currentStage = null }) {
+export default function SpeechBubble({ log }) {
   if (log.moderator) {
     return (
       <div className="flex flex-col items-center gap-1 py-0.5">
@@ -25,8 +25,7 @@ export default function SpeechBubble({ log, currentStage = null }) {
   const roleByStage = Number(log.stage) === 4;
   const roleByPhase = normalizedPhase.includes('role_reversal') || normalizedPhase.includes('reversal');
   const roleByType = /역할\s*반전/.test(typeText);
-  const roleByCurrentStage = currentStage === 4 && (Number(log.stage) >= 4 || roleByPhase || roleByType || !log.phase);
-  const isRoleReversal = roleByStage || roleByPhase || roleByType || roleByCurrentStage;
+  const isRoleReversal = roleByStage || roleByPhase || roleByType;
 
   const normalizedSide = String(log.side ?? '').toLowerCase();
   const getDisplaySide = (side) => {

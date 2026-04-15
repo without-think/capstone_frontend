@@ -19,10 +19,6 @@ export default function Stage3OpponentModal({ opponents = [], onSelect }) {
               className="group flex flex-col gap-2.5 rounded-[20px] border border-stone-200 bg-white p-4 text-left shadow-sm transition-all hover:border-stone-400 hover:shadow-md active:scale-95"
             >
               <span className="text-[15px] font-extrabold text-stone-800">{opp.label}</span>
-              <div>
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-stone-400">지금까지 입장</p>
-                <p className="text-[12px] font-medium leading-relaxed text-stone-600">{opp.stance}</p>
-              </div>
               <span className="mt-1 self-end text-[11px] font-bold text-stone-400 group-hover:text-stone-700 transition-colors">
                 선택 →
               </span>

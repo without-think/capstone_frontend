@@ -70,7 +70,6 @@ export default function ChatPanel({
   stage3Opponent,
 }) {
   const scrollRef = useRef(null);
-  const isRoleReversal = currentStage === 4;
   const hasStage1Moderator = logs.some((log) => log.stage === 1 && log.moderator);
   const openingModeratorGuide = {
     id: 'opening-moderator-guide',
@@ -92,23 +91,33 @@ export default function ChatPanel({
         ref={scrollRef}
         className="hide-scrollbar flex-1 overflow-y-auto p-4 space-y-4"
       >
-        {isRoleReversal && (
-          <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-center">
-            <p className="text-[12px] font-extrabold text-amber-800">역할반전 진행 중</p>
-            <p className="mt-1 text-[12px] font-medium text-amber-700">사용자와 상대 진영 색상이 반대로 표시됩니다.</p>
-          </div>
-        )}
-        {!hasStage1Moderator && (
-          <SpeechBubble log={openingModeratorGuide} currentStage={currentStage} />
+{!hasStage1Moderator && (
+          <SpeechBubble log={openingModeratorGuide} />
         )}
         {(() => {
+          const STAGE_LABELS = {
+            1: '1단계 — 입론',
+            2: '2단계 — 연쇄 논박',
+            3: '3단계 — 자유 논박',
+            4: '4단계 — 역할 반전',
+            5: '5단계 — 종합 및 판정',
+          };
           const seenStages = new Set();
           return logs.map((log) => {
             const isFirstOfStage = typeof log.stage === 'number' && !seenStages.has(log.stage);
             if (isFirstOfStage) seenStages.add(log.stage);
             return (
               <div key={log.id} id={isFirstOfStage ? `stage-anchor-${log.stage}` : undefined}>
-                <SpeechBubble log={log} currentStage={currentStage} />
+                {isFirstOfStage && log.stage > 1 && (
+                  <div className="flex items-center gap-3 my-3">
+                    <div className="flex-1 h-[2px] bg-stone-300" />
+                    <span className="shrink-0 rounded-full border border-stone-300 bg-stone-100 px-3 py-1 text-[12px] font-extrabold text-stone-500 tracking-wide">
+                      {STAGE_LABELS[log.stage] ?? `${log.stage}단계`}
+                    </span>
+                    <div className="flex-1 h-[2px] bg-stone-300" />
+                  </div>
+                )}
+                <SpeechBubble log={log} />
               </div>
             );
           });

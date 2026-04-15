@@ -169,15 +169,6 @@ export default function InputComposer({
           )}
         </div>
 
-        {!stage3CanAttack && (
-          <div className="mx-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2">
-            <p className="text-[11px] font-bold text-amber-800">이번 턴은 답변만 제출 가능합니다.</p>
-            <p className="mt-0.5 text-[11px] font-medium text-amber-700">
-              백엔드 진행 단계가 변경되어 공격 입력은 자동으로 비활성화됩니다.
-            </p>
-          </div>
-        )}
-
         {/* 답변 + 공격 동시 입력 */}
         <div className="flex items-start gap-2 pl-2 pr-1 pb-1">
           <div className="flex-1 rounded-[22px] bg-white/75 shadow-inner divide-y divide-stone-100">
@@ -194,26 +185,23 @@ export default function InputComposer({
                 className="w-full min-h-[64px] max-h-[100px] resize-none bg-transparent px-4 py-2 text-[14px] font-medium text-stone-800 placeholder:text-stone-400 focus:outline-none hide-scrollbar"
               />
             </div>
-            {/* 공격 입력 */}
-            <div>
-              <div className="flex items-center gap-2 px-4 pt-3 pb-1">
-                <span className="inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold bg-stone-100 text-stone-600">공격</span>
-                <span className={`text-[11px] font-medium ${stage3CanAttack ? 'text-stone-400' : 'text-amber-700 font-semibold'}`}>
-                  {stage3CanAttack
-                    ? '상대 논리의 허점을 지적해 입장 자체를 약화시킵니다.'
-                    : '현재는 공격 입력이 비활성화되었습니다.'}
-                </span>
+            {/* 공격 입력 — 활성화된 턴에만 표시 */}
+            {stage3CanAttack && (
+              <div>
+                <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+                  <span className="inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold bg-stone-100 text-stone-600">공격</span>
+                  <span className="text-[11px] font-medium text-stone-400">
+                    상대 논리의 허점을 지적해 입장 자체를 약화시킵니다.
+                  </span>
+                </div>
+                <textarea
+                  value={stage3Attack}
+                  onChange={(e) => setStage3Attack(e.target.value)}
+                  placeholder="상대 입장의 허점을 공략하세요."
+                  className="w-full min-h-[64px] max-h-[100px] resize-none bg-transparent px-4 py-2 text-[14px] font-medium text-stone-800 placeholder:text-stone-400 focus:outline-none hide-scrollbar"
+                />
               </div>
-              <textarea
-                value={stage3Attack}
-                onChange={(e) => setStage3Attack(e.target.value)}
-                disabled={!stage3CanAttack}
-                placeholder={stage3CanAttack ? '상대 입장의 허점을 공략하세요.' : '이번 턴은 공격 작성이 불가합니다.'}
-                className={`w-full min-h-[64px] max-h-[100px] resize-none bg-transparent px-4 py-2 text-[14px] font-medium placeholder:text-stone-400 focus:outline-none hide-scrollbar ${
-                  stage3CanAttack ? 'text-stone-800' : 'text-stone-400 cursor-not-allowed'
-                }`}
-              />
-            </div>
+            )}
           </div>
           <button
             className={`mt-auto flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-full text-white transition-all shadow-md hover:scale-105 ${
