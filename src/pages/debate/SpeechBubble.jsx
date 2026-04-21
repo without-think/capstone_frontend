@@ -117,9 +117,11 @@ export default function SpeechBubble({ log }) {
                   {displaySide === 'pro' ? '찬성' : '반대'}
                 </span>
               )}
-              <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full shrink-0 ${typeBadgeTone}`}>
-                {log.type}
-              </span>
+              {!isRoleReversal && (
+                <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full shrink-0 ${typeBadgeTone}`}>
+                  {log.type}
+                </span>
+              )}
               {isRoleReversal && (
                 <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full shrink-0 bg-amber-100 text-amber-700">
                   {isMine ? '역할반전 중(나)' : '역할반전 중(상대)'}

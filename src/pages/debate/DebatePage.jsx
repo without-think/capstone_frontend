@@ -178,7 +178,7 @@ export default function DebatePage({
   };
 
   const progress         = getProgressInfo();
-  const showLiveAnalysis = debateParams ? !debateComplete : currentStage < 5;
+  const showLiveAnalysis = currentStage < 4 && !debateComplete && (debateParams ? liveAnalysis !== null : true);
 
   const getSpeakerAnalysis = () => {
     if (currentStage === 1) {

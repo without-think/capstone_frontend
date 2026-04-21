@@ -17,6 +17,7 @@ import FloatingActionBar from './components/FloatingActionBar';
 import DebatePage from './pages/debate/DebatePage';
 import PostQuiz from './pages/PostQuiz';
 import PostDebateStats from './pages/PostDebateStats';
+import FinalEvaluation from './pages/FinalEvaluation';
 import DebateTutorialModal from './components/DebateTutorialModal';
 import { prepareDebate } from './api/debatesApi';
 
@@ -26,6 +27,7 @@ const App = () => {
     if (window.location.pathname === '/debate') return '/debate';
     if (window.location.pathname === '/post-quiz') return '/post-quiz';
     if (window.location.pathname === '/stats') return '/stats';
+    if (window.location.pathname === '/evaluation') return '/evaluation';
     return '/';
   };
   const [routePath, setRoutePath] = useState(getInitialRoute);
@@ -57,6 +59,7 @@ const App = () => {
   const isDebateRoute = routePath === '/debate';
   const isPostQuizRoute = routePath === '/post-quiz';
   const isStatsRoute = routePath === '/stats';
+  const isEvaluationRoute = routePath === '/evaluation';
 
   const preDebateBackground = userStance === 'pro'
     ? 'linear-gradient(to bottom right, rgba(147,197,253,0.38), rgba(219,234,254,0.22), rgba(245,245,244,0.08))'
@@ -233,7 +236,7 @@ const App = () => {
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {!isTopicSelectionRoute && !isDebateRoute && !isPostQuizRoute && !isStatsRoute && !activeTopic && (
+      {!isTopicSelectionRoute && !isDebateRoute && !isPostQuizRoute && !isStatsRoute && !isEvaluationRoute && !activeTopic && (
         <HomeLanding onCreateDebate={() => navigate('/topics')} />
       )}
 
@@ -288,13 +291,21 @@ const App = () => {
       )}
 
       {isStatsRoute && (
-        <PostDebateStats onBack={handleEndDebate} />
+        <PostDebateStats onBack={handleEndDebate} onNext={() => navigate('/evaluation')} />
+      )}
+
+      {isEvaluationRoute && (
+        <FinalEvaluation
+          onBack={() => navigate('/stats')}
+          onExit={handleEndDebate}
+          topicLabel={selectedSubTopics[0]?.title ?? selectedSubTopics[0] ?? '토론 최종 평가'}
+        />
       )}
 
       {/* [3] 풀스크린 오버레이 */}
       <div
         className={`fixed inset-0 z-30 flex flex-col transition-all duration-700 delay-300
-        ${activeTopic && !isDebateRoute && !isPostQuizRoute && !isStatsRoute ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        ${activeTopic && !isDebateRoute && !isPostQuizRoute && !isStatsRoute && !isEvaluationRoute ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         style={stage < 4 ? { background: preDebateBackground } : undefined}
       >
         {/* 토론 페이지가 아닐 때만 네비 버튼 표시 */}
@@ -361,7 +372,7 @@ const App = () => {
       </div>
 
       {/* [4] 하단 플로팅 액션 바 - 참여설정(stage 1)에서만 표시 */}
-      {!isDebateRoute && !isPostQuizRoute && !isStatsRoute && stage < 4 && <FloatingActionBar
+      {!isDebateRoute && !isPostQuizRoute && !isStatsRoute && !isEvaluationRoute && stage < 4 && <FloatingActionBar
         selectedSubTopics={selectedSubTopics}
         stage={stage}
         userStance={userStance}

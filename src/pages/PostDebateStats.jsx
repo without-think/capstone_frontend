@@ -230,7 +230,7 @@ function SingleGauge({ score, label, isGray = false }) {
 }
 
 // ─── 메인 페이지 ─────────────────────────────────────────────────────────────
-export default function PostDebateStats({ onBack = () => {} }) {
+export default function PostDebateStats({ onBack = () => {}, onNext = () => {} }) {
   const { before, after } = MOCK_SCORES;
 
   const totalOf = (s) =>
@@ -307,10 +307,10 @@ export default function PostDebateStats({ onBack = () => {} }) {
         <div className="mt-6 flex w-full justify-end rounded-[28px] border border-white/80 bg-white/80 px-5 py-3.5 backdrop-blur-md shadow-[0_16px_32px_rgba(0,0,0,0.08)]">
           <button
             type="button"
-            onClick={onBack}
+            onClick={onNext}
             className="w-full rounded-full bg-stone-900 px-10 py-3.5 text-sm font-bold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:bg-black sm:w-auto"
           >
-            토론 종료
+            최종 평가 보기 →
           </button>
         </div>
 

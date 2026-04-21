@@ -70,13 +70,6 @@ export default function ChatPanel({
   stage3Opponent,
 }) {
   const scrollRef = useRef(null);
-  const hasStage1Moderator = logs.some((log) => log.stage === 1 && log.moderator);
-  const openingModeratorGuide = {
-    id: 'opening-moderator-guide',
-    stage: 1,
-    moderator: true,
-    text: '1단계 입론입니다. 핵심 주장만 쓰지 말고, 웹검색으로 통계나 사례를 조금 찾아 근거를 보강해보세요. 확인한 자료가 있다면 논거에 자연스럽게 녹여서 발표하면 됩니다.',
-  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -91,9 +84,6 @@ export default function ChatPanel({
         ref={scrollRef}
         className="hide-scrollbar flex-1 overflow-y-auto p-4 space-y-4"
       >
-{!hasStage1Moderator && (
-          <SpeechBubble log={openingModeratorGuide} />
-        )}
         {(() => {
           const STAGE_LABELS = {
             1: '1단계 — 입론',
@@ -122,8 +112,8 @@ export default function ChatPanel({
             );
           });
         })()}
-        {/* 타이핑 인디케이터 */}
-        {isTyping && <TypingIndicator speaker={isTyping} currentStage={currentStage} />}
+        {/* 타이핑 인디케이터: 5단계 이후 유저가 의견 제출한 뒤엔 숨김 */}
+        {isTyping && !(currentStage >= 5 && !isMyTurn) && <TypingIndicator speaker={isTyping} currentStage={currentStage} />}
       </div>
 
       {/* 입력 영역 */}
