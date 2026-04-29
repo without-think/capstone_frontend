@@ -19,10 +19,12 @@ import PostQuiz from './pages/PostQuiz';
 import PostDebateStats from './pages/PostDebateStats';
 import FinalEvaluation from './pages/FinalEvaluation';
 import DebateTutorialModal from './components/DebateTutorialModal';
+import Login from './pages/Login';
 import { prepareDebate } from './api/debatesApi';
 
 const App = () => {
   const getInitialRoute = () => {
+    if (window.location.pathname === '/login') return '/login';
     if (window.location.pathname === '/topics') return '/topics';
     if (window.location.pathname === '/debate') return '/debate';
     if (window.location.pathname === '/post-quiz') return '/post-quiz';
@@ -55,6 +57,7 @@ const App = () => {
   const activeData = topics.find(t => t.id === activeTopic);
   const activeProAiCount = userStance === 'pro' ? agentCount - 1 : agentCount;
   const activeConAiCount = userStance === 'con' ? agentCount - 1 : agentCount;
+  const isLoginRoute = routePath === '/login';
   const isTopicSelectionRoute = routePath === '/topics';
   const isDebateRoute = routePath === '/debate';
   const isPostQuizRoute = routePath === '/post-quiz';
@@ -236,7 +239,14 @@ const App = () => {
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {!isTopicSelectionRoute && !isDebateRoute && !isPostQuizRoute && !isStatsRoute && !isEvaluationRoute && !activeTopic && (
+      {isLoginRoute && (
+        <Login
+          onLogin={() => navigate('/')}
+          onSkip={() => navigate('/')}
+        />
+      )}
+
+      {!isLoginRoute && !isTopicSelectionRoute && !isDebateRoute && !isPostQuizRoute && !isStatsRoute && !isEvaluationRoute && !activeTopic && (
         <HomeLanding onCreateDebate={() => navigate('/topics')} />
       )}
 
@@ -246,7 +256,7 @@ const App = () => {
 
       {/* [1] 메인 화면 */}
       <div className={`absolute inset-0 px-4 transition-all duration-700 z-10 overflow-auto
-        ${isTopicSelectionRoute && !activeTopic ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}
+        ${!isLoginRoute && isTopicSelectionRoute && !activeTopic ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}
       >
         <div className="mx-auto flex min-h-screen w-full items-start justify-center pt-6 md:items-center md:pt-0">
           <FixedStage baseWidth={1440} baseHeight={900}>

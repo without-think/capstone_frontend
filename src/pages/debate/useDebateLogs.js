@@ -341,7 +341,7 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
       let effectivePreparedId = preparedSessionId;
 
       if (!effectivePreparedId) {
-        const deadline = Date.now() + 10000;
+        const deadline = Date.now() + 20000;
         while (Date.now() < deadline) {
           if (ctrl.signal.aborted) return;
           try {
