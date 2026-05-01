@@ -127,6 +127,16 @@ const App = () => {
     setStage(1);
   };
 
+  const getSelectedSubTopic = () => selectedSubTopics[0] ?? null;
+  const getSelectedTopicLabel = () => {
+    const selected = getSelectedSubTopic();
+    return selected?.title ?? selected ?? '토론 최종 평가';
+  };
+  const getSelectedTopicId = () => {
+    const selected = getSelectedSubTopic();
+    return selected?.id ?? selected?.title ?? selected ?? debateParams?.topic ?? activeTopic;
+  };
+
   const handleSliderChange = (side, index, value) => {
     let numVal = parseInt(value, 10);
     if (numVal < 1) numVal = 1;
@@ -151,7 +161,7 @@ const App = () => {
       ...aiStances[sameSide].slice(0, agentCount - 1),
       ...aiStances[opponentSide].slice(0, agentCount),
     ];
-    const topicId = selectedSubTopics[0]?.id ?? selectedSubTopics[0];
+    const topicId = getSelectedTopicId();
 
     setDebateParams({
       topic: topicId,
@@ -296,7 +306,12 @@ const App = () => {
           visible
           activeData={activeData}
           selectedSubTopics={selectedSubTopics}
-          onComplete={() => navigate('/stats')}
+          onComplete={(data) => {
+            try {
+              sessionStorage.setItem('capstone_post_quiz', JSON.stringify(data));
+            } catch {}
+            navigate('/stats');
+          }}
         />
       )}
 
@@ -305,10 +320,10 @@ const App = () => {
       )}
 
       {isEvaluationRoute && (
-        <FinalEvaluation
+          <FinalEvaluation
           onBack={() => navigate('/stats')}
           onExit={handleEndDebate}
-          topicLabel={selectedSubTopics[0]?.title ?? selectedSubTopics[0] ?? '토론 최종 평가'}
+          topicLabel={getSelectedTopicLabel()}
         />
       )}
 
@@ -369,7 +384,12 @@ const App = () => {
             activeData={activeData}
             selectedSubTopics={selectedSubTopics}
             visible={stage === 3}
-            onComplete={handleEnterDebate}
+            onComplete={(data) => {
+              try {
+                sessionStorage.setItem('capstone_pre_quiz', JSON.stringify({ topicId: getSelectedTopicId(), data }));
+              } catch {}
+              handleEnterDebate();
+            }}
           />
           {stage === 4 && !isDebateRoute && (
             <div className="absolute inset-0 flex items-center justify-center px-6">

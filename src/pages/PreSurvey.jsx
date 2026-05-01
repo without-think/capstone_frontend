@@ -4,8 +4,12 @@ import { getSurveyLink } from '../config/surveyLinks';
 const PreSurvey = ({ visible, topicId, activeData, selectedSubTopics = [], onComplete }) => {
   const surveyUrl = getSurveyLink(topicId);
   const hasSurveyUrl = Boolean(surveyUrl);
-  const selectedSubTopic = activeData?.subTopics?.find((subTopic) => subTopic.title === selectedSubTopics[0]);
-  const topicLabel = selectedSubTopic?.title ?? selectedSubTopics[0] ?? activeData?.title ?? '주제 미선택';
+  const selected = selectedSubTopics[0];
+  const selectedTitle = selected?.title ?? selected;
+  const selectedSubTopic = selected?.title
+    ? selected
+    : activeData?.subTopics?.find((subTopic) => subTopic.title === selectedTitle);
+  const topicLabel = selectedSubTopic?.title ?? selectedTitle ?? activeData?.title ?? '주제 미선택';
 
   const handleOpenForm = () => {
     window.open('about:blank', '_blank', 'noopener,noreferrer');

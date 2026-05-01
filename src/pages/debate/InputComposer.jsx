@@ -327,7 +327,7 @@ export default function InputComposer({
               : isProSide ? 'bg-blue-500 hover:bg-blue-600' : 'bg-rose-500 hover:bg-rose-600'
           }`}
           onClick={currentStage === 1 ? handleSendOpening : handleSendTurn}
-          disabled={currentStage === 1 && (openingLoading || openingSubmitted)}
+          disabled={currentStage ===   1 && (openingLoading || openingSubmitted)}
         >
           <SendHorizonal size={16} className="ml-0.5" />
         </button>

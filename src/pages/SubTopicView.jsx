@@ -76,13 +76,16 @@ const SubTopicView = ({ activeData, selectedSubTopics, onToggle, visible }) => {
           <div ref={tipRef} className="flex-1 flex flex-col gap-3 overflow-visible">
             <div className={`flex flex-col gap-3 min-h-[340px] transition-all duration-[260ms] ease-in-out ${slideClass}`}>
               {pageItems.map((sub) => {
-                const isSelected = selectedSubTopics.includes(sub.title);
+                const isSelected = selectedSubTopics.some((selected) => (
+                  (selected?.id && sub.id && selected.id === sub.id)
+                  || (selected?.title ?? selected) === sub.title
+                ));
                 const isOpen = openTip === sub.title;
 
                 return (
                   <div key={sub.title} className="relative">
                     <div
-                      onClick={() => onToggle(sub.title)}
+                      onClick={() => onToggle(sub)}
                       className={`flex items-center gap-3 px-6 py-4 rounded-full border-2 cursor-pointer transition-all duration-300
                         ${isSelected
                           ? 'bg-stone-900 border-stone-900 text-white shadow-xl scale-[1.02]'

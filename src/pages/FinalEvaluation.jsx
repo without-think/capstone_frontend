@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { ArrowLeft, Star, User, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import BackgroundBubbles from '../components/BackgroundBubbles';
 
@@ -130,26 +131,26 @@ function ConflictBar({ proPct, conPct }) {
 }
 
 // ─── 2. 삼각형 레이더 ─────────────────────────────────────────────────────────
-function TriangleRadar({ size = 220 }) {
+function TriangleRadar({ metrics, size = 220 }) {
   const cx = size / 2, cy = size / 2 + 8, r = size * 0.31, MAX = 100;
   const angle  = (i) => (Math.PI * 2 * i) / 3 - Math.PI / 2;
   const pt     = (i, s = 1) => ({ x: cx + Math.cos(angle(i)) * r * s, y: cy + Math.sin(angle(i)) * r * s });
   const toStr  = (pts) => pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-  const proPts  = METRICS.map((m, i) => pt(i, m.pro  / MAX));
-  const conPts  = METRICS.map((m, i) => pt(i, m.con  / MAX));
+  const proPts  = metrics.map((m, i) => pt(i, m.pro  / MAX));
+  const conPts  = metrics.map((m, i) => pt(i, m.con  / MAX));
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: 'visible' }}>
       {[25, 50, 75, 100].map(lvl => (
-        <polygon key={lvl} points={toStr(METRICS.map((_, i) => pt(i, lvl / MAX)))}
+        <polygon key={lvl} points={toStr(metrics.map((_, i) => pt(i, lvl / MAX)))}
           fill="none" stroke={lvl === 100 ? '#D6D3D1' : '#ECEAE9'}
           strokeWidth={lvl === 100 ? 1.5 : 1} strokeDasharray={lvl === 100 ? undefined : '3,3'} />
       ))}
-      {METRICS.map((_, i) => { const e = pt(i); return <line key={i} x1={cx} y1={cy} x2={e.x.toFixed(1)} y2={e.y.toFixed(1)} stroke="#E7E5E4" strokeWidth={1} />; })}
+      {metrics.map((_, i) => { const e = pt(i); return <line key={i} x1={cx} y1={cy} x2={e.x.toFixed(1)} y2={e.y.toFixed(1)} stroke="#E7E5E4" strokeWidth={1} />; })}
       <polygon points={toStr(conPts)}  fill="rgba(239,68,68,0.10)"  stroke="#ef4444" strokeWidth={1.8} strokeLinejoin="round" />
       <polygon points={toStr(proPts)}  fill="rgba(59,130,246,0.12)" stroke="#3b82f6" strokeWidth={1.8} strokeLinejoin="round" />
       {proPts.map( (p, i) => <circle key={`p${i}`} cx={p.x} cy={p.y} r={3.5} fill="#3b82f6" stroke="white" strokeWidth={1.5} />)}
       {conPts.map( (p, i) => <circle key={`c${i}`} cx={p.x} cy={p.y} r={3.5} fill="#ef4444" stroke="white" strokeWidth={1.5} />)}
-      {METRICS.map((m, i) => {
+      {metrics.map((m, i) => {
         const lp = { x: cx + Math.cos(angle(i)) * r * 1.35, y: cy + Math.sin(angle(i)) * r * 1.35 };
         const cos = Math.cos(angle(i));
         return <text key={m.key} x={lp.x.toFixed(1)} y={lp.y.toFixed(1)}
@@ -321,9 +322,96 @@ function FeedbackCard({ metric }) {
   );
 }
 
+// ─── 평가 데이터 → 3지표 매핑 ─────────────────────────────────────────────────
+function mapToTriMetrics(phase) {
+  if (!phase) return { argument: 0, evidence: 0, language: 0 };
+  const rd  = (phase.reasoning_density?.score ?? 0) * 20;
+  const ks  = (phase.knowledge_specificity?.score ?? 0) * 20;
+  const ee  = (phase.evidence_expansion?.score ?? 0) * 20;
+  const ev  = (phase.evidence_validity?.score ?? 0) * 20;
+  const pd  = (phase.perspective_diversity?.score ?? 0) * 20;
+  return {
+    argument: Math.round((rd + ks) / 2),
+    evidence: Math.round((ee + ev) / 2),
+    language: Math.round(pd),
+  };
+}
+
 // ─── 메인 페이지 ─────────────────────────────────────────────────────────────
 export default function FinalEvaluation({ onBack = () => {}, onExit = () => {}, topicLabel = '토론 최종 평가' }) {
-  const finalIsPro = FINAL_WINNER === 'pro';
+  const [evalData, setEvalData] = useState(null);
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(sessionStorage.getItem('capstone_evaluation'));
+      if (stored) setEvalData(stored);
+    } catch {}
+  }, []);
+
+  // 평가 데이터 → 표시 값 도출
+  const proPost  = evalData?.pro?.post  ?? null;
+  const conPost  = evalData?.con?.post  ?? null;
+  const proMetrics = mapToTriMetrics(proPost);
+  const conMetrics = mapToTriMetrics(conPost);
+
+  const proAvg = evalData ? Math.round(evalData.pro?.post?.average_100 ?? 0) : null;
+  const conAvg = evalData ? Math.round(evalData.con?.post?.average_100 ?? 0) : null;
+
+  // 승자 결정 (평가 있으면 평균으로, 없으면 mock)
+  const finalProPct = evalData && proAvg !== null && conAvg !== null
+    ? Math.round((proAvg / (proAvg + conAvg)) * 100)
+    : FINAL_PRO_PCT;
+  const finalConPct = 100 - finalProPct;
+  const finalIsPro  = finalProPct >= 50;
+  const winnerComment = evalData
+    ? (finalIsPro
+        ? `찬성 측이 ${proAvg}점으로 반대 측(${conAvg}점)보다 높은 논증력을 보였습니다.`
+        : `반대 측이 ${conAvg}점으로 찬성 측(${proAvg}점)보다 높은 논증력을 보였습니다.`)
+    : WINNER_COMMENT;
+
+  // 3지표 배열 (평가 있으면 API, 없으면 mock)
+  const metricsData = [
+    { key: 'argument', label: '논증력', icon: 'psychology',
+      pro: evalData ? proMetrics.argument : 62,
+      con: evalData ? conMetrics.argument : 81,
+      user: evalData ? Math.round((proMetrics.argument + conMetrics.argument) / 2) : 82 },
+    { key: 'evidence', label: '근거력', icon: 'attach_file',
+      pro: evalData ? proMetrics.evidence : 54,
+      con: evalData ? conMetrics.evidence : 78,
+      user: evalData ? Math.round((proMetrics.evidence + conMetrics.evidence) / 2) : 71 },
+    { key: 'language', label: '언어력', icon: 'record_voice_over',
+      pro: evalData ? proMetrics.language : 75,
+      con: evalData ? conMetrics.language : 57,
+      user: evalData ? Math.round((proMetrics.language + conMetrics.language) / 2) : 75 },
+  ];
+
+  // AI 코치 피드백
+  const feedbackMetrics = [
+    {
+      key: 'argument', label: '논증력', icon: 'psychology',
+      score: metricsData[0].user,
+      best:     { turn: '-', summary: proPost?.reasoning_density?.label ?? '논리 추론',    praise:  proPost?.reasoning_density?.reason ?? USER_FEEDBACK_METRICS[0].best.praise },
+      worst:    { turn: '-', summary: conPost?.knowledge_specificity?.label ?? '지식 구체성', critique: conPost?.knowledge_specificity?.reason ?? USER_FEEDBACK_METRICS[0].worst.critique },
+      suggestion: evalData ? (proPost?.overall_summary ?? USER_FEEDBACK_METRICS[0].suggestion) : USER_FEEDBACK_METRICS[0].suggestion,
+    },
+    {
+      key: 'evidence', label: '근거력', icon: 'attach_file',
+      score: metricsData[1].user,
+      best:     { turn: '-', summary: proPost?.evidence_expansion?.label ?? '근거 확장',    praise:  proPost?.evidence_expansion?.reason ?? USER_FEEDBACK_METRICS[1].best.praise },
+      worst:    { turn: '-', summary: conPost?.evidence_validity?.label ?? '근거 타당성',    critique: conPost?.evidence_validity?.reason ?? USER_FEEDBACK_METRICS[1].worst.critique },
+      suggestion: evalData ? (conPost?.overall_summary ?? USER_FEEDBACK_METRICS[1].suggestion) : USER_FEEDBACK_METRICS[1].suggestion,
+    },
+    {
+      key: 'language', label: '언어력', icon: 'record_voice_over',
+      score: metricsData[2].user,
+      best:     { turn: '-', summary: proPost?.perspective_diversity?.label ?? '관점 다각성', praise:  proPost?.perspective_diversity?.reason ?? USER_FEEDBACK_METRICS[2].best.praise },
+      worst:    { turn: '-', summary: conPost?.perspective_diversity?.label ?? '관점 다각성', critique: conPost?.perspective_diversity?.reason ?? USER_FEEDBACK_METRICS[2].worst.critique },
+      suggestion: evalData ? (proPost?.overall_summary ?? USER_FEEDBACK_METRICS[2].suggestion) : USER_FEEDBACK_METRICS[2].suggestion,
+    },
+  ];
+
+  const mvpScore = evalData ? Math.max(...metricsData.map(m => m.user)) : MVP.score;
+  const mvpSide  = finalIsPro ? 'pro' : 'con';
 
   return (
     <div className="absolute inset-0 overflow-y-auto hide-scrollbar bg-[#F5F5F4]">
@@ -364,10 +452,10 @@ export default function FinalEvaluation({ onBack = () => {}, onExit = () => {}, 
               {finalIsPro ? '찬성 측 승리' : '반대 측 승리'}
             </p>
             <p className="text-[15px] font-semibold text-stone-500 text-center max-w-2xl leading-relaxed">
-              {WINNER_COMMENT}
+              {winnerComment}
             </p>
           </div>
-          <ConflictBar proPct={FINAL_PRO_PCT} conPct={FINAL_CON_PCT} />
+          <ConflictBar proPct={finalProPct} conPct={finalConPct} />
         </div>
 
         {/* ── Row 2: 능력치 분석(2fr) + 타임라인(3fr) ── */}
@@ -378,14 +466,14 @@ export default function FinalEvaluation({ onBack = () => {}, onExit = () => {}, 
             <h3 className="mb-1 text-[20px] font-extrabold text-stone-800">능력치 및 데이터 분석</h3>
             <p className="mb-5 text-[14px] text-stone-400">전체 턴 평균 · 3개 지표 진영 비교</p>
             <div className="flex flex-col items-center mb-5">
-              <TriangleRadar size={220} />
+              <TriangleRadar metrics={metricsData} size={220} />
               <div className="mt-3 flex items-center gap-5 text-[13px] font-bold text-stone-600">
                 <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-blue-400"/>찬성</span>
                 <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-red-400"/>반대</span>
               </div>
             </div>
             <div className="border-t border-stone-100 pt-4 space-y-2.5">
-              {METRICS.map(m => <MetricRow key={m.key} {...m} />)}
+              {metricsData.map(m => <MetricRow key={m.key} {...m} />)}
             </div>
           </div>
 
@@ -399,15 +487,14 @@ export default function FinalEvaluation({ onBack = () => {}, onExit = () => {}, 
 
         {/* ── Row 3: MVP (full width, 가로 바) ── */}
         <div className={`rounded-[36px] border border-white/80 px-8 py-6 shadow-[0_24px_60px_rgba(0,0,0,0.10)] ${
-          MVP.side === 'pro'
+          mvpSide === 'pro'
             ? 'bg-[linear-gradient(145deg,rgba(219,234,254,0.7),rgba(255,255,255,0.96))]'
             : 'bg-[linear-gradient(145deg,rgba(254,226,226,0.7),rgba(255,255,255,0.96))]'
         }`}>
           <div className="flex items-center gap-6">
-            {/* 아이콘 + 이름 */}
             <div className="flex items-center gap-4 shrink-0">
               <div className={`flex h-16 w-16 items-center justify-center rounded-full ${
-                MVP.side === 'pro' ? 'bg-blue-500' : 'bg-rose-500'
+                mvpSide === 'pro' ? 'bg-blue-500' : 'bg-rose-500'
               }`}>
                 <User size={30} className="text-white" />
               </div>
@@ -418,16 +505,14 @@ export default function FinalEvaluation({ onBack = () => {}, onExit = () => {}, 
                     <Star size={11} className="fill-white" /> MVP
                   </span>
                 </div>
-                <p className="text-[13px] font-semibold text-stone-500">{MVP.reason}</p>
+                <p className="text-[13px] font-semibold text-stone-500">
+                  {evalData ? `3개 지표 평균 ${mvpScore}점` : MVP.reason}
+                </p>
               </div>
             </div>
-
-            {/* 구분선 */}
             <div className="mx-2 h-12 w-px bg-stone-200 shrink-0" />
-
-            {/* 지표 요약 (3개 가로) */}
             <div className="flex flex-1 items-center justify-around gap-4">
-              {USER_FEEDBACK_METRICS.map(m => (
+              {feedbackMetrics.map(m => (
                 <div key={m.key} className="flex flex-col items-center gap-1">
                   <MIcon name={m.icon} size={20} fill={1} className="text-stone-400" />
                   <span className="text-[13px] font-bold text-stone-600">{m.label}</span>
@@ -442,7 +527,7 @@ export default function FinalEvaluation({ onBack = () => {}, onExit = () => {}, 
         <div>
           <h3 className="mb-4 text-[20px] font-extrabold text-stone-800 px-1">AI 코치 피드백</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {USER_FEEDBACK_METRICS.map(m => <FeedbackCard key={m.key} metric={m} />)}
+            {feedbackMetrics.map(m => <FeedbackCard key={m.key} metric={m} />)}
           </div>
         </div>
 

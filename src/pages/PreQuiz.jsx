@@ -107,9 +107,13 @@ function StanceSection({
 const PreQuiz = ({ visible, activeData, selectedSubTopics = [], onComplete }) => {
   const [responses, setResponses] = useState(createInitialResponses);
 
-  const selectedSubTopic = activeData?.subTopics?.find(
-    (subTopic) => subTopic.title === selectedSubTopics[0],
-  );
+  const selected = selectedSubTopics[0];
+  const selectedTitle = selected?.title ?? selected;
+  const selectedSubTopic = selected?.title
+    ? selected
+    : activeData?.subTopics?.find(
+      (subTopic) => subTopic.title === selectedTitle,
+    );
 
   const stanceTitles = useMemo(
     () => ({
@@ -118,7 +122,7 @@ const PreQuiz = ({ visible, activeData, selectedSubTopics = [], onComplete }) =>
     }),
     [selectedSubTopic],
   );
-  const topicLabel = selectedSubTopic?.title ?? selectedSubTopics[0] ?? activeData?.title ?? '주제 미선택';
+  const topicLabel = selectedSubTopic?.title ?? selectedTitle ?? activeData?.title ?? '주제 미선택';
 
   const updateStance = (stanceKey, updater) => {
     setResponses((prev) => ({

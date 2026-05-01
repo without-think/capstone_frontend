@@ -17,7 +17,11 @@ const ParamsView = ({
   const proActive = userStance === 'pro';
   const conActive = userStance === 'con';
 
-  const selectedSubTopic = activeData?.subTopics?.find(s => s.title === selectedSubTopics[0]);
+  const selected = selectedSubTopics[0];
+  const selectedTitle = selected?.title ?? selected;
+  const selectedSubTopic = selected?.title
+    ? selected
+    : activeData?.subTopics?.find(s => s.title === selectedTitle);
 
   const activeCountBg = proActive
     ? 'bg-blue-500 text-white shadow-2xl scale-105'
@@ -49,7 +53,7 @@ const ParamsView = ({
         <div className="w-full max-w-4xl flex flex-col items-center pt-8 md:pt-12">
           <div className="mb-8 text-center">
             <span className="inline-block px-5 py-1.5 rounded-full bg-stone-800 text-white text-base font-extrabold mb-4">
-              {selectedSubTopics[0]} {selectedSubTopics.length > 1 && `외 ${selectedSubTopics.length - 1}건`}
+              {selectedTitle} {selectedSubTopics.length > 1 && `외 ${selectedSubTopics.length - 1}건`}
             </span>
             <h2 className="text-4xl md:text-5xl font-extrabold text-stone-800 tracking-tight">
               참여 설정
