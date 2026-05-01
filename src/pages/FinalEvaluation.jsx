@@ -33,7 +33,7 @@ const METRICS = [
 ];
 
 // delta: 양수 = 찬성 우세도 증가, 음수 = 반대 우세도 증가
-const TIMELINE_TURNS = [
+const TIMELINE_TURNS_MOCK = [
   {
     id: 1, turn: 30, speaker: '나(찬성)', side: 'pro', stage: 5,
     label: '최고 기여 턴', labelColor: 'emerald', delta: +6,
@@ -53,12 +53,50 @@ const TIMELINE_TURNS = [
     feedback: '분배적 공정성 문제를 선제 제시해 논의 프레임을 유리하게 가져왔습니다.',
   },
   {
-    id: 5, turn: 26, speaker: '나(찬성)', side: 'pro', stage: 5,
+    id: 4, turn: 26, speaker: '나(찬성)', side: 'pro', stage: 5,
     label: '역효과 턴', labelColor: 'amber', delta: -2,
     summary: '"동의합니다" 이후 짧은 합의 발언',
     feedback: '동의 표현이 너무 이르게 나와 찬성 우세도를 오히려 하락시켰습니다.',
   },
 ];
+
+const SWING_TYPE_MAP = {
+  biggest_swing: { label: '최고 기여 턴', labelColor: 'emerald' },
+  best_rebuttal:  { label: '강력 반박',   labelColor: 'rose'    },
+  worst_turn:     { label: '역효과 턴',   labelColor: 'amber'   },
+  logical_error:  { label: '논리 오류',   labelColor: 'rose'    },
+};
+
+const SWING_PHASE_TO_STAGE = {
+  opening: 1, rebuttal: 2, chained_rebuttal: 2,
+  free_rebuttal: 3, role_reversal: 4, synthesis: 5,
+};
+
+function mapSwingTurns(swingTurns) {
+  if (!swingTurns?.length) return TIMELINE_TURNS_MOCK;
+  return swingTurns.map((t, i) => {
+    const isPro    = (t.side ?? '').toUpperCase() === 'PRO';
+    const typeInfo = SWING_TYPE_MAP[t.type] ?? { label: '주요 턴', labelColor: 'blue' };
+    // weighted_score 범위 1~10, 기준선 5
+    // pro_percent 공식: 50 + (pro_ema - con_ema) * 15 에서 EMA 변화량 근사
+    const ws       = t.weighted_score ?? t.impact ?? 5;
+    const strength = Math.round((ws - 5) * 1.5) || 1;
+    // PRO 고득점 → 찬성 상승(+), CON 고득점 → 반대 상승(-)
+    const delta    = isPro ? strength : -strength;
+    return {
+      id:         i + 1,
+      turn:       t.turn_index ?? i + 1,
+      speaker:    isPro ? '찬성' : '반대',
+      side:       isPro ? 'pro' : 'con',
+      stage:      SWING_PHASE_TO_STAGE[t.phase] ?? 1,
+      label:      typeInfo.label,
+      labelColor: typeInfo.labelColor,
+      delta,
+      summary:    t.speech_summary || t.narrative || '-',
+      feedback:   t.narrative || t.speech_summary || '-',
+    };
+  });
+}
 
 const MVP = {
   speaker: '나',
@@ -339,12 +377,29 @@ function mapToTriMetrics(phase) {
 
 // ─── 메인 페이지 ─────────────────────────────────────────────────────────────
 export default function FinalEvaluation({ onBack = () => {}, onExit = () => {}, topicLabel = '토론 최종 평가' }) {
-  const [evalData, setEvalData] = useState(null);
+  const [evalData, setEvalData]     = useState(null);
+  const [swingTurns, setSwingTurns] = useState(null);
 
   useEffect(() => {
     try {
       const stored = JSON.parse(sessionStorage.getItem('capstone_evaluation'));
       if (stored) setEvalData(stored);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      // 토론 종료 버튼이 capstone_debate_session을 클리어하기 전에 저장한 ID 우선 사용
+      let sessionId = sessionStorage.getItem('capstone_debate_session_id');
+      if (!sessionId) {
+        const session = JSON.parse(sessionStorage.getItem('capstone_debate_session'));
+        sessionId = session?.sessionId;
+      }
+      if (!sessionId) return;
+      fetch(`http://localhost:8080/api/debates/${sessionId}/final-report`)
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(data => setSwingTurns(data.swing_turns ?? []))
+        .catch(() => {});
     } catch {}
   }, []);
 
@@ -358,7 +413,7 @@ export default function FinalEvaluation({ onBack = () => {}, onExit = () => {}, 
   const conAvg = evalData ? Math.round(evalData.con?.post?.average_100 ?? 0) : null;
 
   // 승자 결정 (평가 있으면 평균으로, 없으면 mock)
-  const finalProPct = evalData && proAvg !== null && conAvg !== null
+  const finalProPct = evalData && proAvg !== null && conAvg !== null && (proAvg + conAvg) > 0
     ? Math.round((proAvg / (proAvg + conAvg)) * 100)
     : FINAL_PRO_PCT;
   const finalConPct = 100 - finalProPct;
@@ -481,7 +536,7 @@ export default function FinalEvaluation({ onBack = () => {}, onExit = () => {}, 
           <div className="rounded-[36px] border border-white/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(245,245,244,0.94))] px-7 py-7 shadow-[0_24px_60px_rgba(0,0,0,0.10)]">
             <h3 className="mb-1 text-[20px] font-extrabold text-stone-800">핵심 전환 턴 타임라인</h3>
             <p className="mb-6 text-[14px] text-stone-400">주요 발언 5개 · PRO ↔ CON 교차 시각화</p>
-            <AlternatingTimeline turns={TIMELINE_TURNS} />
+            <AlternatingTimeline turns={mapSwingTurns(swingTurns)} />
           </div>
         </div>
 

@@ -314,7 +314,14 @@ export default function DebatePage({
           {debateComplete && (
             <button
               type="button"
-              onClick={() => { clearDebateStorage(); onExit(); }}
+              onClick={() => {
+                try {
+                  const s = JSON.parse(sessionStorage.getItem(DEBATE_STORAGE_KEY));
+                  if (s?.sessionId) sessionStorage.setItem('capstone_debate_session_id', s.sessionId);
+                } catch {}
+                clearDebateStorage();
+                onExit();
+              }}
               className="flex items-center gap-4 rounded-full bg-stone-900 px-7 py-3.5 text-base font-bold text-white shadow-2xl transition-all hover:scale-105 hover:bg-black active:scale-95 sm:px-12 sm:py-5 sm:text-xl"
             >
               토론 종료
