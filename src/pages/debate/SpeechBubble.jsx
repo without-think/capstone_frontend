@@ -135,6 +135,9 @@ export default function SpeechBubble({ log }) {
             {/* 본문 */}
             <div className={`font-medium text-[15px] ${isMine ? 'text-white' : 'text-stone-800'}`}>
               {renderMarkdown(log.text, isMine)}
+              {log.isStreaming && (
+                <span className={`ml-0.5 inline-block h-4 w-1 translate-y-0.5 animate-pulse rounded-full ${isMine ? 'bg-white/80' : 'bg-stone-500/70'}`} />
+              )}
             </div>
           </div>
         </div>

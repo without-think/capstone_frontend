@@ -3,7 +3,13 @@ import { MOCK_SPEECH_LOGS, STAGE1_ORDER, STAGE3_MOCK_RESPONSES, STAGE3_MAX_CYCLE
 import { buildApiUrl } from '../../api';
 
 // ── 글자 길이 기반 랜덤 딜레이 ────────────────────────────────────────────────
-function getRenderDelay(text) {
+function getRenderDelay(text, isOneOnOne = false) {
+  if (isOneOnOne) {
+    const base = 400;
+    const byLength = Math.min((text?.length ?? 0) * 5, 1000);
+    const jitter = Math.floor(Math.random() * 300);
+    return base + byLength + jitter;
+  }
   const base = 900;
   const byLength = Math.min((text?.length ?? 0) * 12, 2200);
   const jitter = Math.floor(Math.random() * 700);
@@ -86,6 +92,7 @@ function makeAgentLabelResolver(savedState = null) {
 
 // ── sessionStorage 기반 세션 유지 ────────────────────────────────────────────
 const STORAGE_KEY = 'capstone_debate_session';
+const AGENT_BUBBLE_CHAR_DELAY = 28;
 
 function saveDebateSession(data) {
   try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
@@ -159,9 +166,47 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
   const submitTurnRef = useRef(null); // 재귀 자동제출용 ref
   const firstEntryReceivedRef = useRef(false); // 첫 번째 entry 여부 (입론 첫 에이전트 딜레이 스킵용)
   const freeRebuttalUserTurnCountRef = useRef(0);
+  // 자유논박 에이전트 타입 추적
+  const freeRebuttalUserHasSpokenRef = useRef(false);   // 사용자가 자유논박에서 발언했는지
+  const freeRebuttalAgentCountInTurnRef = useRef(0);    // 현재 에이전트 턴에서 몇 번째 엔트리인지
   const analysisByTurnRef = useRef(new Map());
   // 화면에 표시된 entry의 turnNumber → resolvedSpeaker 기록 (analysis 늦게 올 때 즉시 업데이트용)
   const displayedTurnsRef = useRef(new Map());
+  const bubbleStreamingTimersRef = useRef(new Set());
+
+  const clearBubbleStreamingTimers = useCallback(() => {
+    bubbleStreamingTimersRef.current.forEach((timerId) => clearTimeout(timerId));
+    bubbleStreamingTimersRef.current.clear();
+  }, []);
+
+  const streamAgentLog = useCallback((log) => new Promise((resolve) => {
+    const fullText = log.text ?? '';
+    setVisibleLogs((prev) => [...prev, { ...log, text: '', isStreaming: true }]);
+
+    let charIndex = 0;
+
+    const step = () => {
+      charIndex += 1;
+      setVisibleLogs((prev) => prev.map((item) => (
+        item.id === log.id
+          ? { ...item, text: fullText.slice(0, charIndex), isStreaming: charIndex < fullText.length }
+          : item
+      )));
+
+      if (charIndex >= fullText.length) {
+        resolve();
+        return;
+      }
+
+      const timerId = setTimeout(() => {
+        bubbleStreamingTimersRef.current.delete(timerId);
+        step();
+      }, AGENT_BUBBLE_CHAR_DELAY);
+      bubbleStreamingTimersRef.current.add(timerId);
+    };
+
+    step();
+  }), []);
 
   const buildLiveAnalysisSnapshot = useCallback((raw) => {
     const argumentScore = (raw.argumentScore ?? raw.argument_score ?? 0) / 10;
@@ -212,10 +257,9 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
     }
 
     setIsTyping(next.speaker ?? '...');
-    const delay = next.skipDelay ? 500 : getRenderDelay(next.text ?? '');
+    const delay = next.skipDelay ? 500 : getRenderDelay(next.text ?? '', agentCount === 1);
     timerRef.current = setTimeout(() => {
       setIsTyping(null);
-      setVisibleLogs((prev) => [...prev, next]);
       // entry가 화면에 표시될 때 해당 turn의 분석으로 전체 업데이트
       if (!next.moderator) {
         const turnKey = next.turnNumber;
@@ -229,7 +273,9 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
         if (cached) setLiveAnalysis({ ...cached, resolvedSpeaker: next.speaker ?? null });
         // analysis가 아직 안 왔으면 analysis 핸들러에서 displayedTurnsRef 확인 후 업데이트
       }
-      timerRef.current = setTimeout(() => playNextRef.current?.(), 350);
+      streamAgentLog(next).then(() => {
+        timerRef.current = setTimeout(() => playNextRef.current?.(), 350);
+      });
     }, delay);
   };
 
@@ -244,6 +290,7 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
   // ── 상태 초기화 ─────────────────────────────────────────────────────────────
   const resetState = useCallback(() => {
     clearTimer();
+    clearBubbleStreamingTimers();
     abortRef.current?.abort();
     queueRef.current = [];
     isPlayingRef.current = false;
@@ -264,11 +311,13 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
     stage3CycleRef.current = 0;
     firstEntryReceivedRef.current = false;
     freeRebuttalUserTurnCountRef.current = 0;
+    freeRebuttalUserHasSpokenRef.current = false;
+    freeRebuttalAgentCountInTurnRef.current = 0;
     analysisByTurnRef.current = new Map();
     displayedTurnsRef.current = new Map();
     resolveLabelRef.current = makeAgentLabelResolver();
     clearDebateSession();
-  }, [clearTimer]);
+  }, [clearTimer, clearBubbleStreamingTimers]);
 
   // ── Mock 모드 ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -385,6 +434,18 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
               log.skipDelay = true;
               firstEntryReceivedRef.current = true;
             }
+            // 자유논박 에이전트 타입 결정
+            if (log.phase === 'free_rebuttal' && log.speaker !== '나') {
+              if (!freeRebuttalUserHasSpokenRef.current) {
+                log.type = '공격';
+              } else if (freeRebuttalAgentCountInTurnRef.current === 0) {
+                log.type = '답변';
+                freeRebuttalAgentCountInTurnRef.current++;
+              } else {
+                log.type = '공격';
+                freeRebuttalAgentCountInTurnRef.current++;
+              }
+            }
             queueRef.current.push(log);
             if (!isPlayingRef.current) playNextRef.current?.();
           } else if (type === 'waiting') {
@@ -442,11 +503,14 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
       if (phase === 'free_rebuttal' && !isChained) {
         freeRebuttalUserTurnCountRef.current += 1;
         setFreeRebuttalUserTurnCount(freeRebuttalUserTurnCountRef.current);
+        freeRebuttalUserHasSpokenRef.current = true;
+        freeRebuttalAgentCountInTurnRef.current = 0;
       }
 
       // 사용자 로그 즉시 표시
       // - isChained=false: 답변(또는 단일 발언) 말풍선
-      // - isChained=true : 자동 체인된 공격 말풍선 (별도 bubble)
+      //   자유논박에서 pendingAttack이 있으면 공격 버블도 동시에 추가
+      // - isChained=true : API 제출만 진행 (버블은 이미 동시 추가됨)
       if (!isChained) {
         const userLog = debateParams
           ? {
@@ -472,20 +536,25 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
                 isUser: true,
               };
             })();
-        setVisibleLogs((prev) => [...prev, userLog]);
-      } else {
-        // 공격 말풍선 별도 표시 (자동 체인 시)
-        setVisibleLogs((prev) => [...prev, {
-          id: `user-attack-${phase}-${Date.now()}`,
-          stage,
-          side: userStance,
-          speaker: '나',
-          type: userBubbleType,
-          phase,
-          text: normalizedContent,
-          isUser: true,
-        }]);
+
+        // 자유논박: 답변+공격 버블을 동시에 화면에 표시 (SSE/mock 공통)
+        if (normalizedPendingAttack && phase === 'free_rebuttal') {
+          const attackLog = {
+            id: `user-attack-${phase}-${Date.now()}`,
+            stage,
+            side: userStance,
+            speaker: '나',
+            type: '공격',
+            phase,
+            text: normalizedPendingAttack,
+            isUser: true,
+          };
+          setVisibleLogs((prev) => [...prev, userLog, attackLog]);
+        } else {
+          setVisibleLogs((prev) => [...prev, userLog]);
+        }
       }
+      // isChained=true: 버블은 위에서 이미 동시 추가됨. API 제출만 진행.
       setAwaitingUserTurn(false);
       if (stage === 1) setOpeningComplete(true);
 
@@ -591,7 +660,11 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
             } else {
               // 백엔드가 다른 단계로 넘어갔다면 pendingAttack은 자동 폐기
               queueAwaitUserRef.current = true;
-              if (!isPlayingRef.current) setAwaitingUserTurn(true);
+              if (!isPlayingRef.current) {
+                // 큐가 이미 비어 있으면 '...' 인디케이터가 남아있을 수 있으므로 클리어
+                setIsTyping(null);
+                setAwaitingUserTurn(true);
+              }
             }
           }
         }

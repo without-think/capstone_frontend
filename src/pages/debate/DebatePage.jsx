@@ -267,6 +267,7 @@ export default function DebatePage({
               isProSide={effectiveIsProSide}
               stage3CanAttack={canUseStage3Attack}
               isTyping={isTyping}
+              debateComplete={debateComplete}
               onSubmitOpening={submitOpening}
               openingLoading={loading}
               openingError={error}

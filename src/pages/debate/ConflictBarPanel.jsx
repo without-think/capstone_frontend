@@ -1,5 +1,3 @@
-import { CONFLICT_BY_STAGE } from './mockData';
-
 const JUDGING_FROM_STAGE = 5;
 
 // 바 안에서 좌우로 튀는 스파크 (수평 방향만)
@@ -13,11 +11,8 @@ const SPARKS = [
 ];
 
 export default function ConflictBarPanel({ currentStage, isDebateComplete = false, liveProPercent = null, liveConPercent = null }) {
-  const scores = CONFLICT_BY_STAGE[currentStage] ?? { pro: 50, con: 50 };
-  const total = scores.pro + scores.con;
-  const mockProPct = Math.round((scores.pro / total) * 100);
-  // 실시간 분석 데이터 우선, 없으면 mock
-  const proPct = liveProPercent !== null ? Math.round(liveProPercent) : mockProPct;
+  // live 분석 데이터 우선, 없으면 50/50으로 시작
+  const proPct = liveProPercent !== null ? Math.round(liveProPercent) : 50;
   const conPct = 100 - proPct;
 
   const isJudging = currentStage >= 4 || isDebateComplete;

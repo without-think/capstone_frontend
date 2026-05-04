@@ -61,6 +61,7 @@ export default function ChatPanel({
   isProSide,
   stage3CanAttack = true,
   isTyping,
+  debateComplete = false,
   onSubmitOpening,
   openingLoading,
   openingError,
@@ -112,12 +113,12 @@ export default function ChatPanel({
             );
           });
         })()}
-        {/* 타이핑 인디케이터: 5단계 이후 유저가 의견 제출한 뒤엔 숨김 */}
-        {isTyping && !(currentStage >= 5 && !isMyTurn) && <TypingIndicator speaker={isTyping} currentStage={currentStage} />}
+        {/* 타이핑 인디케이터: 토론 종료 후 / 최적해 모달 중 / 5단계 이후 유저 제출 뒤엔 숨김 */}
+        {isTyping && !debateComplete && !isFinalize && !(currentStage >= 5 && !isMyTurn) && <TypingIndicator speaker={isTyping} currentStage={currentStage} />}
       </div>
 
-      {/* 입력 영역 */}
-      {currentStage <= 5 && (
+      {/* 입력 영역: 토론 종료 후 숨김 */}
+      {currentStage <= 5 && !debateComplete && (
         <div className="px-3 pb-3 pt-0 bg-transparent">
           <div className={`rounded-[28px] p-2 transition-all duration-300 border shadow-sm ${
             isMyTurn
