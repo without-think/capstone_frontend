@@ -169,9 +169,6 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
   // 자유논박 에이전트 타입 추적
   const freeRebuttalUserHasSpokenRef = useRef(false);   // 사용자가 자유논박에서 발언했는지
   const freeRebuttalAgentCountInTurnRef = useRef(0);    // 현재 에이전트 턴에서 몇 번째 엔트리인지
-  const analysisByTurnRef = useRef(new Map());
-  // 화면에 표시된 entry의 turnNumber → resolvedSpeaker 기록 (analysis 늦게 올 때 즉시 업데이트용)
-  const displayedTurnsRef = useRef(new Map());
   const bubbleStreamingTimersRef = useRef(new Set());
 
   const clearBubbleStreamingTimers = useCallback(() => {
@@ -260,18 +257,8 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
     const delay = next.skipDelay ? 500 : getRenderDelay(next.text ?? '', agentCount === 1);
     timerRef.current = setTimeout(() => {
       setIsTyping(null);
-      // entry가 화면에 표시될 때 해당 turn의 분석으로 전체 업데이트
-      if (!next.moderator) {
-        const turnKey = next.turnNumber;
-        // 표시된 entry 기록 (analysis가 늦게 도착할 때 즉시 업데이트하기 위함)
-        if (turnKey !== null && turnKey !== undefined) {
-          displayedTurnsRef.current.set(turnKey, next.speaker ?? null);
-        }
-        const cached = (turnKey !== null && turnKey !== undefined)
-          ? analysisByTurnRef.current.get(turnKey)
-          : null;
-        if (cached) setLiveAnalysis({ ...cached, resolvedSpeaker: next.speaker ?? null });
-        // analysis가 아직 안 왔으면 analysis 핸들러에서 displayedTurnsRef 확인 후 업데이트
+      if (!next.moderator && next._analysis) {
+        setLiveAnalysis({ ...next._analysis, resolvedSpeaker: next.speaker ?? null });
       }
       streamAgentLog(next).then(() => {
         timerRef.current = setTimeout(() => playNextRef.current?.(), 350);
@@ -313,8 +300,6 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
     freeRebuttalUserTurnCountRef.current = 0;
     freeRebuttalUserHasSpokenRef.current = false;
     freeRebuttalAgentCountInTurnRef.current = 0;
-    analysisByTurnRef.current = new Map();
-    displayedTurnsRef.current = new Map();
     resolveLabelRef.current = makeAgentLabelResolver();
     clearDebateSession();
   }, [clearTimer, clearBubbleStreamingTimers]);
@@ -426,15 +411,13 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
             const sid = raw.session_id ?? raw.sessionId;
             sessionIdRef.current = sid;
             setSessionId(sid);
-          } else if (type === 'entry') {
-            const log = buildLogFromSSE(raw, resolveLabelRef.current);
-            console.log(`[SSE stream] entry 수신: speaker=${log.speaker} turn=${log.turnNumber} t=${Date.now()}`);
-            // 입론 단계 첫 번째 에이전트는 딜레이 없이 즉시 표시
+          } else if (type === 'turn') {
+            const log = buildLogFromSSE(raw.entry, resolveLabelRef.current);
+            console.log(`[SSE stream] turn 수신: speaker=${log.speaker} speakerId=${raw.entry?.speaker_id ?? raw.entry?.speakerId} stance=${raw.entry?.stance} turn=${log.turnNumber}`);
             if (!firstEntryReceivedRef.current) {
               log.skipDelay = true;
               firstEntryReceivedRef.current = true;
             }
-            // 자유논박 에이전트 타입 결정
             if (log.phase === 'free_rebuttal' && log.speaker !== '나') {
               if (!freeRebuttalUserHasSpokenRef.current) {
                 log.type = '공격';
@@ -446,6 +429,7 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
                 freeRebuttalAgentCountInTurnRef.current++;
               }
             }
+            if (raw.analysis) log._analysis = buildLiveAnalysisSnapshot(raw.analysis);
             queueRef.current.push(log);
             if (!isPlayingRef.current) playNextRef.current?.();
           } else if (type === 'waiting') {
@@ -461,21 +445,6 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
               queueAwaitUserRef.current = true;
               if (!isPlayingRef.current) setAwaitingUserTurn(true);
             }
-          } else if (type === 'analysis') {
-            const snapshot = buildLiveAnalysisSnapshot(raw);
-            console.log(`[SSE stream] analysis 수신: turnIndex=${snapshot.turnIndex} t=${Date.now()}`);
-            const storeKey = snapshot.turnIndex ?? Date.now();
-            analysisByTurnRef.current.set(storeKey, snapshot);
-            const isUser = snapshot.speakerId === 'user' || snapshot.speakerId === '사용자';
-            if (isUser) {
-              // 사용자 분석: 즉시 이름+차트 업데이트
-              setLiveAnalysis({ ...snapshot, resolvedSpeaker: '나' });
-            } else if (snapshot.turnIndex !== null && displayedTurnsRef.current.has(snapshot.turnIndex)) {
-              // 버블이 이미 표시된 후 analysis가 도착: 즉시 업데이트
-              const label = displayedTurnsRef.current.get(snapshot.turnIndex);
-              setLiveAnalysis({ ...snapshot, resolvedSpeaker: label });
-            }
-            // 버블 표시 전 analysis 도착: playNextRef에서 버블과 동시에 업데이트
           }
         }
       } catch (e) {
@@ -620,26 +589,21 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
           ctrl.signal,
         )) {
           const raw = JSON.parse(data);
-          if (type === 'entry') {
-            const log = buildLogFromSSE(raw, resolveLabelRef.current);
-            console.log(`[SSE submit] entry 수신: speaker=${log.speaker} turn=${log.turnNumber} t=${Date.now()}`);
-            // 사용자 자신의 entry는 이미 수동으로 추가했으므로 스킵
+          if (type === 'turn') {
+            const log = buildLogFromSSE(raw.entry, resolveLabelRef.current);
+            console.log(`[SSE submit] turn 수신: speaker=${log.speaker} speakerId=${raw.entry?.speaker_id ?? raw.entry?.speakerId} stance=${raw.entry?.stance} turn=${log.turnNumber}`);
             if (log.speaker === '나') continue;
+            if (raw.analysis) {
+              const snapshot = buildLiveAnalysisSnapshot(raw.analysis);
+              const isUser = snapshot.speakerId === 'user' || snapshot.speakerId === '사용자';
+              if (isUser) {
+                setLiveAnalysis({ ...snapshot, resolvedSpeaker: '나' });
+              } else {
+                log._analysis = snapshot;
+              }
+            }
             queueRef.current.push(log);
             if (!isPlayingRef.current) playNextRef.current?.();
-          } else if (type === 'analysis') {
-            const snapshot = buildLiveAnalysisSnapshot(raw);
-            console.log(`[SSE submit] analysis 수신: turnIndex=${snapshot.turnIndex} t=${Date.now()}`);
-            const storeKey = snapshot.turnIndex ?? Date.now();
-            analysisByTurnRef.current.set(storeKey, snapshot);
-            const isUser = snapshot.speakerId === 'user' || snapshot.speakerId === '사용자';
-            if (isUser) {
-              setLiveAnalysis({ ...snapshot, resolvedSpeaker: '나' });
-            } else if (snapshot.turnIndex !== null && displayedTurnsRef.current.has(snapshot.turnIndex)) {
-              const label = displayedTurnsRef.current.get(snapshot.turnIndex);
-              setLiveAnalysis({ ...snapshot, resolvedSpeaker: label });
-            }
-            // 버블 표시 전 도착 시 playNextRef에서 처리
           } else if (type === 'waiting') {
             const wf = raw.waiting_for ?? raw.waitingFor ?? null;
             const finished = raw.is_finished ?? raw.isFinished ?? false;

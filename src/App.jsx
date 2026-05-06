@@ -296,6 +296,7 @@ const App = () => {
           preparedSessionId={preparedSessionId}
           userStance={userStance}
           agentCount={agentCount}
+          topicLabel={getSelectedTopicLabel()}
           onBack={() => navigate('/topics')}
           onExit={() => navigate('/post-quiz')}
         />
