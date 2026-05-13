@@ -271,11 +271,11 @@ export function useDebateLogs(debateParams, agentCount = 2, userStance = 'pro', 
         return;
       }
       queueRef.current.shift();
-      setIsTyping(null);
       if (!next.moderator && next._analysis) {
         setLiveAnalysis({ ...next._analysis, resolvedSpeaker: next.speaker ?? null });
       }
       streamAgentLog(next).then(() => {
+        setIsTyping(null);
         timerRef.current = setTimeout(() => playNextRef.current?.(), 350);
       });
     }, delay);
