@@ -9,6 +9,7 @@ function clearDebateStorage() {
 import ChatPanel from './ChatPanel';
 import StepperPanel from './StepperPanel';
 import AnalysisPanel from './AnalysisPanel';
+import AssistantGuidePanel from './AssistantGuidePanel';
 import ConflictBarPanel from './ConflictBarPanel';
 import Stage3OpponentModal from './Stage3OpponentModal';
 import { useDebateLogs } from './useDebateLogs';
@@ -45,6 +46,7 @@ export default function DebatePage({
   topicLabel = '',
 }) {
   const [showSearchPopup, setShowSearchPopup] = useState(!!debateParams);
+  const searchPopupReadyRef = useRef(false);
   const [currentStage, setCurrentStage] = useState(1);
   const [viewStage, setViewStage] = useState(1); // 스테퍼에서 선택한 단계 (보기용)
   const [stage3Opponent, setStage3Opponent] = useState(null);
@@ -66,6 +68,7 @@ export default function DebatePage({
     waitingFor,
     stage3CanAttack,
     liveAnalysis,
+    sessionId,
     submitTurn,
     pauseQueue,
     resumeQueue,
@@ -181,9 +184,15 @@ export default function DebatePage({
     if (stage) setCurrentStage((prev) => Math.max(prev, stage));
   }, [waitingFor]);
 
-  // 첫 AI 발언 도착 시 검색 팝업 자동 닫기
+  // 검색 팝업: 최소 10초 유지 후 첫 AI 발언 도착 시 닫기
   useEffect(() => {
-    if (logs.length > 0) setShowSearchPopup(false);
+    if (!debateParams) return;
+    const timer = setTimeout(() => { searchPopupReadyRef.current = true; }, 10000);
+    return () => clearTimeout(timer);
+  }, [debateParams]);
+
+  useEffect(() => {
+    if (logs.length > 0 && searchPopupReadyRef.current) setShowSearchPopup(false);
   }, [logs.length]);
 
   // currentStage가 올라가면 viewStage도 자동으로 따라옴
@@ -432,6 +441,11 @@ export default function DebatePage({
               isDebateComplete={debateComplete}
               liveProPercent={liveAnalysis?.proPercent ?? null}
               liveConPercent={liveAnalysis?.conPercent ?? null}
+            />
+            <AssistantGuidePanel
+              sessionId={sessionId ?? preparedSessionId}
+              waitingFor={waitingFor}
+              opponentId={stage3Opponent?.id ?? null}
             />
           </aside>
 

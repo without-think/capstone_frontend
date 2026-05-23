@@ -18,7 +18,7 @@ import DebatePage from './pages/debate/DebatePage';
 import PostQuiz from './pages/PostQuiz';
 import PostDebateStats from './pages/PostDebateStats';
 import FinalEvaluation from './pages/FinalEvaluation';
-import DebateTutorialModal from './components/DebateTutorialModal';
+import ServiceIntroPage from './pages/ServiceIntroPage';
 import Login from './pages/Login';
 import { prepareDebate } from './api/debatesApi';
 
@@ -30,6 +30,7 @@ const App = () => {
     if (window.location.pathname === '/post-quiz') return '/post-quiz';
     if (window.location.pathname === '/stats') return '/stats';
     if (window.location.pathname === '/evaluation') return '/evaluation';
+    if (window.location.pathname === '/guide') return '/guide';
     return '/';
   };
   const [routePath, setRoutePath] = useState(getInitialRoute);
@@ -43,8 +44,6 @@ const App = () => {
   const [topics, setTopics] = useState(TOPICS); // 기본값: 하드코딩 데이터 (API 실패 시 fallback)
   const [debateParams, setDebateParams] = useState(null);
   const [preparedSessionId, setPreparedSessionId] = useState(null);
-  const [tutorialOpen, setTutorialOpen] = useState(false);
-  const [tutorialStep, setTutorialStep] = useState(0);
   const debateEnterTimeoutRef = useRef(null);
 
   // 오늘의 주제 fetch
@@ -63,6 +62,7 @@ const App = () => {
   const isPostQuizRoute = routePath === '/post-quiz';
   const isStatsRoute = routePath === '/stats';
   const isEvaluationRoute = routePath === '/evaluation';
+  const isGuideRoute = routePath === '/guide';
 
   const preDebateBackground = userStance === 'pro'
     ? 'linear-gradient(to bottom right, rgba(147,197,253,0.38), rgba(219,234,254,0.22), rgba(245,245,244,0.08))'
@@ -101,8 +101,6 @@ const App = () => {
     setDebateParams(null);
     setPreparedSessionId(null);
     try { sessionStorage.removeItem('capstone_prepared_session'); } catch {}
-    setTutorialOpen(false);
-    setTutorialStep(0);
   };
 
   const handleTopicClick = (id) => {
@@ -210,27 +208,6 @@ const App = () => {
     }, 420);
   };
 
-  const handleEnterDebate = () => {
-    setTutorialStep(0);
-    setTutorialOpen(true);
-  };
-
-  const handleTutorialClose = () => {
-    setTutorialOpen(false);
-    startDebate();
-  };
-
-  const handleTutorialNext = () => {
-    if (tutorialStep >= 4) {
-      handleTutorialClose();
-      return;
-    }
-    setTutorialStep((prev) => prev + 1);
-  };
-
-  const handleTutorialPrev = () => {
-    setTutorialStep((prev) => Math.max(0, prev - 1));
-  };
 
   return (
     <div className="relative isolate min-h-screen w-full overflow-hidden bg-[#F5F5F4] text-gray-800" style={{ fontFamily: 'var(--ui-font)' }}>
@@ -389,7 +366,7 @@ const App = () => {
               try {
                 sessionStorage.setItem('capstone_pre_quiz', JSON.stringify({ topicId: getSelectedTopicId(), data }));
               } catch {}
-              handleEnterDebate();
+              startDebate();
             }}
           />
           {stage === 4 && !isDebateRoute && (
@@ -410,15 +387,9 @@ const App = () => {
         onEnter={handleEnter}
       />}
 
-      <DebateTutorialModal
-        open={tutorialOpen}
-        stepIndex={tutorialStep}
-        agentCount={agentCount}
-        userStance={userStance}
-        onPrev={handleTutorialPrev}
-        onNext={handleTutorialNext}
-        onClose={handleTutorialClose}
-      />
+      {isGuideRoute && (
+        <ServiceIntroPage onBack={() => navigate('/')} />
+      )}
     </div>
   );
 };
