@@ -7,6 +7,9 @@
 
 import { apiFetch } from './index';
 
+// FastAPI 직접 호출 (어시스턴트는 AI 엔진에서 직접 처리)
+const AI_BASE_URL = 'http://localhost:8001';
+
 export const prepareDebate = (debateParams) =>
   apiFetch('/api/debates/prepare', {
     method: 'POST',
@@ -15,3 +18,12 @@ export const prepareDebate = (debateParams) =>
 
 export const getDebateState = (sessionId) =>
   apiFetch(`/api/debates/${sessionId}/state`);
+
+export const getAssistantGuide = (sessionId, phase, opponentId = null) => {
+  const qs = opponentId ? `?opponent_id=${encodeURIComponent(opponentId)}` : '';
+  return fetch(`${AI_BASE_URL}/debate/${sessionId}/assistant/${phase}${qs}`)
+    .then((res) => {
+      if (!res.ok) throw new Error(`assistant API error ${res.status}`);
+      return res.json();
+    });
+};

@@ -20,11 +20,13 @@ import PostDebateStats from './pages/PostDebateStats';
 import FinalEvaluation from './pages/FinalEvaluation';
 import ServiceIntroPage from './pages/ServiceIntroPage';
 import Login from './pages/Login';
+import OAuthCallback from './pages/OAuthCallback';
 import { prepareDebate } from './api/debatesApi';
 
 const App = () => {
   const getInitialRoute = () => {
     if (window.location.pathname === '/login') return '/login';
+    if (window.location.pathname === '/oauth/callback') return '/oauth/callback';
     if (window.location.pathname === '/topics') return '/topics';
     if (window.location.pathname === '/debate') return '/debate';
     if (window.location.pathname === '/post-quiz') return '/post-quiz';
@@ -226,6 +228,10 @@ const App = () => {
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
+      {routePath === '/oauth/callback' && (
+        <OAuthCallback onSuccess={() => navigate('/')} />
+      )}
+
       {isLoginRoute && (
         <Login
           onLogin={() => navigate('/')}
@@ -248,7 +254,7 @@ const App = () => {
         <div className="mx-auto flex min-h-screen w-full items-start justify-center pt-6 md:items-center md:pt-0">
           <FixedStage baseWidth={1440} baseHeight={900}>
             <div className="relative h-[900px] w-[1440px]">
-              <TopHeader />
+              <TopHeader onLogout={() => navigate('/login')} />
 
               <div className="mx-auto flex w-full max-w-[1200px] flex-col items-center pt-[96px] text-center">
                 <h1 className="text-[48px] font-extrabold leading-[55px] tracking-[-0.03em] text-[#38332E]">
